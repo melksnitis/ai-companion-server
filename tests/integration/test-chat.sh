@@ -160,7 +160,7 @@ test_tools_endpoint() {
     echo "📋 Test 5: Tools Endpoint"
     echo "------------------------"
     
-    response=$(curl -sf "$API_BASE_URL/tools")
+    response=$(curl -sfL "$API_BASE_URL/tools/")
     
     if echo "$response" | grep -q "Bash\|Read\|Write"; then
         print_result 0 "Tools endpoint returned Claude Agent SDK tools"
@@ -175,7 +175,7 @@ test_memory_endpoint() {
     echo "📋 Test 6: Memory Endpoint"
     echo "-------------------------"
     
-    response=$(curl -sf "$API_BASE_URL/memory")
+    response=$(curl -sfL "$API_BASE_URL/memory/")
     
     if [ $? -eq 0 ]; then
         print_result 0 "Memory endpoint accessible"

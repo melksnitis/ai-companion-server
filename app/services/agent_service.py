@@ -13,34 +13,30 @@ from app.models.schemas import ChatStreamEvent, ToolCall
 
 
 class AgentService:
-    """Simplified agent service using Claude Agent SDK with Letta memory."""
+    """Simplified agent service using Claude Agent SDK with Letta memory.
+    
+    Model routing is handled by Claude Code Router - the agent simply uses
+    whatever model the router directs requests to based on routing rules.
+    """
     
     def __init__(self):
-        os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+        # Use OpenRouter API key (Claude Code Router will handle model selection)
+        os.environ["ANTHROPIC_API_KEY"] = settings.openrouter_api_key or settings.anthropic_api_key
+            
         if settings.letta_api_key:
             os.environ["LETTA_API_KEY"] = settings.letta_api_key
         
         self.agent_name = settings.letta_agent_name
-        self.model = settings.claude_model
-    
-    def _get_system_prompt(self) -> str:
-        return """You are an evolving personal AI assistant with persistent memory and learning capabilities.
-
-You have access to tools for:
-- Executing bash commands
-- Reading and editing files  
-- Managing your workspace
-
-Your memory persists across conversations through Letta's learning system.
-Be helpful, concise, and proactive. Learn from interactions to become more personalized over time."""
     
     def _get_agent_options(self) -> ClaudeAgentOptions:
-        """Configure Claude Agent SDK options with tools."""
+        """Configure Claude Agent SDK options with tools.
+        
+        Model selection is handled by Claude Code Router based on routing rules.
+        No need to specify model or base URL here.
+        """
         return ClaudeAgentOptions(
             permission_mode="bypassPermissions",
-            system_prompt=self._get_system_prompt(),
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search"],
-            model=self.model.split("-")[-1] if "haiku" in self.model or "sonnet" in self.model else "sonnet",
         )
     
     async def stream_chat(
@@ -77,7 +73,7 @@ Be helpful, concise, and proactive. Learn from interactions to become more perso
                     
                     yield ChatStreamEvent(
                         event_type="message_start",
-                        data={"model": self.model, "agent_id": agent_id}
+                        data={"agent_id": agent_id, "note": "Model selected by Claude Code Router"}
                     )
                     
                     await client.query(prompt=message)

@@ -15,12 +15,11 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - MAX_TOKENS=${MAX_TOKENS:-4096}
       - LETTA_API_KEY=${LETTA_API_KEY}
       - LETTA_BASE_URL=${LETTA_BASE_URL:-https://api.letta.com}
       - LETTA_AGENT_NAME=${LETTA_AGENT_NAME:-evolving-assistant}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - ROUTER_API_KEY=${ROUTER_API_KEY:-your-router-secret-key}
       - WORKSPACE_PATH=/app/workspace
       - DATABASE_URL=sqlite+aiosqlite:///./data/memory.db
