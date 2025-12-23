@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  ai-companion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-companion-server
+    ports:
+      - "8000:8000"
+      - "3000:3000"
+    environment:
+      - APP_NAME=Evolving Personal AI Assistant
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+      - MAX_TOKENS=${MAX_TOKENS:-4096}
+      - LETTA_API_KEY=${LETTA_API_KEY}
+      - LETTA_BASE_URL=${LETTA_BASE_URL:-https://api.letta.com}
+      - LETTA_AGENT_NAME=${LETTA_AGENT_NAME:-evolving-assistant}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ROUTER_API_KEY=${ROUTER_API_KEY:-your-router-secret-key}
+      - WORKSPACE_PATH=/app/workspace
+      - DATABASE_URL=sqlite+aiosqlite:///./data/memory.db
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - ./workspace:/app/workspace
+      - ./data:/app/data
+      - ./router/config.json:/root/.claude-code-router/config.json
+      - router_logs:/root/.claude-code-router/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:8000/health && curl -f http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ai-network
+  # Optional: Redis for caching and pub/sub (future enhancement)
+  redis:
+    image: redis:7-alpine
+    container_name: ai-companion-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - ai-network
+
+networks:
+  ai-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  router_logs:
+  ollama_data:

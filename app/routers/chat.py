@@ -1,0 +1,166 @@
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
+import json
+import uuid
+
+from app.models import ChatRequest, ChatMessage, ChatStreamEvent, ToolCall, ToolResult
+from app.models.database import get_db, ConversationDB
+from app.services import AgentService, MemoryService
+from sqlalchemy import select
+
+router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+async def get_conversation(
+    conversation_id: str,
+    db: AsyncSession,
+) -> Optional[ConversationDB]:
+    result = await db.execute(
+        select(ConversationDB).where(ConversationDB.id == conversation_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def save_conversation(
+    conversation_id: str,
+    messages: List[dict],
+    db: AsyncSession,
+    title: Optional[str] = None,
+):
+    conv = await get_conversation(conversation_id, db)
+    
+    if conv:
+        conv.messages = messages
+        if title:
+            conv.title = title
+    else:
+        conv = ConversationDB(
+            id=conversation_id,
+            title=title,
+            messages=messages,
+        )
+        db.add(conv)
+    
+    await db.commit()
+
+
+@router.post("/stream")
+async def stream_chat(
+    request: ChatRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    conversation_id = request.conversation_id or str(uuid.uuid4())
+    
+    conv = await get_conversation(conversation_id, db) if request.conversation_id else None
+    existing_messages = conv.messages if conv else []
+    
+    all_messages = [
+        ChatMessage(role=m["role"], content=m["content"])
+        for m in existing_messages
+    ]
+    all_messages.append(ChatMessage(role="user", content=request.message))
+    
+    memory_labels = ["human", "persona", "preferences", "knowledge"] if request.include_memory else None
+    
+    agent_service = AgentService()
+    
+    async def generate_stream():
+        yield f"data: {json.dumps({'event': 'conversation_id', 'data': {'id': conversation_id}})}\n\n"
+        
+        assistant_content = ""
+        
+        async for event in agent_service.stream_chat(
+            message=request.message,
+            conversation_id=conversation_id,
+            memory_labels=memory_labels,
+        ):
+            yield f"data: {json.dumps({'event': event.event_type, 'data': event.data})}\n\n"
+            
+            if event.event_type == "content_delta":
+                assistant_content += event.data.get("text", "")
+        
+        if assistant_content:
+            all_messages.append(ChatMessage(role="assistant", content=assistant_content))
+        
+        await save_conversation(
+            conversation_id,
+            [{"role": m.role, "content": m.content} for m in all_messages],
+            db,
+        )
+        
+        yield f"data: {json.dumps({'event': 'done', 'data': {}})}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/conversations")
+async def list_conversations(
+    limit: int = 20,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ConversationDB)
+        .order_by(ConversationDB.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    conversations = result.scalars().all()
+    
+    return [
+        {
+            "id": conv.id,
+            "title": conv.title,
+            "message_count": len(conv.messages),
+            "created_at": conv.created_at.isoformat(),
+            "updated_at": conv.updated_at.isoformat(),
+        }
+        for conv in conversations
+    ]
+
+
+@router.get("/conversations/{conversation_id}")
+async def get_conversation_detail(
+    conversation_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await get_conversation(conversation_id, db)
+    
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    return {
+        "id": conv.id,
+        "title": conv.title,
+        "messages": conv.messages,
+        "created_at": conv.created_at.isoformat(),
+        "updated_at": conv.updated_at.isoformat(),
+    }
+
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import delete
+    
+    result = await db.execute(
+        delete(ConversationDB).where(ConversationDB.id == conversation_id)
+    )
+    await db.commit()
+    
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    return {"status": "deleted"}
