@@ -19,7 +19,7 @@ echo ""
 
 # Function to print test results
 print_result() {
-    if [ $1 -eq 0 ]; then
+    if [ "$1" -eq 0 ]; then
         echo -e "${GREEN}✓${NC} $2"
     else
         echo -e "${RED}✗${NC} $2"
@@ -175,9 +175,7 @@ test_memory_endpoint() {
     echo "📋 Test 6: Memory Endpoint"
     echo "-------------------------"
     
-    response=$(curl -sf "$API_BASE_URL/memory")
-    
-    if [ $? -eq 0 ]; then
+    if curl -sf "$API_BASE_URL/memory" > /dev/null; then
         print_result 0 "Memory endpoint accessible"
     else
         print_result 1 "Memory endpoint failed"

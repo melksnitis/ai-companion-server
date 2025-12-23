@@ -9,7 +9,6 @@ NC='\033[0m' # No Color
 
 # Configuration
 ROUTER_URL="${ROUTER_URL:-http://localhost:3000}"
-TIMEOUT=30
 
 echo "🧪 Claude Code Router - Integration Tests"
 echo "=========================================="
@@ -19,7 +18,7 @@ echo ""
 
 # Function to print test results
 print_result() {
-    if [ $1 -eq 0 ]; then
+    if [ "$1" -eq 0 ]; then
         echo -e "${GREEN}✓${NC} $2"
     else
         echo -e "${RED}✗${NC} $2"
@@ -46,9 +45,7 @@ test_router_health() {
     echo "📋 Test 1: Router Health Check"
     echo "-----------------------------"
     
-    response=$(curl -sf "$ROUTER_URL/health" 2>&1)
-    
-    if [ $? -eq 0 ]; then
+    if curl -sf "$ROUTER_URL/health" > /dev/null 2>&1; then
         print_result 0 "Router health endpoint accessible"
     else
         print_result 1 "Router health check failed"
