@@ -1,58 +1,29 @@
 {
   "APIKEY": "${ROUTER_API_KEY}",
   "HOST": "0.0.0.0",
+  "PORT": 3000,
   "LOG": true,
   "LOG_LEVEL": "info",
   "API_TIMEOUT_MS": 600000,
   "NON_INTERACTIVE_MODE": true,
   "Providers": [
     {
-      "name": "anthropic",
-      "api_base_url": "https://api.anthropic.com/v1/messages",
-      "api_key": "${ANTHROPIC_API_KEY}",
-      "models": [
-        "claude-sonnet-4-20250514",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022"
-      ]
-    },
-    {
       "name": "openrouter",
       "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
       "api_key": "${OPENROUTER_API_KEY}",
       "models": [
-        "anthropic/claude-sonnet-4",
-        "google/gemini-2.5-pro-preview",
         "deepseek/deepseek-chat"
       ],
       "transformer": {
-        "use": ["openrouter"]
+        "use": ["openrouter", "deepseek", "tool_use"]
       }
-    },
-    {
-      "name": "ollama",
-      "api_base_url": "http://ollama:11434/v1/chat/completions",
-      "api_key": "ollama",
-      "models": [
-        "qwen2.5-coder:latest",
-        "deepseek-coder-v2:latest"
-      ]
-    },
-    {
-      "name": "local-companion",
-      "api_base_url": "http://localhost:8000/chat/stream",
-      "api_key": "internal",
-      "models": [
-        "companion-agent"
-      ]
     }
   ],
   "Router": {
-    "default": "anthropic,claude-sonnet-4-20250514",
-    "background": "ollama,qwen2.5-coder:latest",
+    "default": "openrouter,deepseek/deepseek-chat",
+    "background": "openrouter,deepseek/deepseek-chat",
     "think": "openrouter,deepseek/deepseek-chat",
-    "longContext": "openrouter,google/gemini-2.5-pro-preview",
-    "longContextThreshold": 60000,
-    "companion": "local-companion,companion-agent"
+    "longContext": "openrouter,deepseek/deepseek-chat",
+    "longContextThreshold": 60000
   }
 }

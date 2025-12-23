@@ -3,9 +3,9 @@ set -e
 
 echo "🚀 Starting AI Companion Server with Claude Code Router..."
 
-# Start Claude Code Router in the background
+# Start Claude Code Router in the background (server mode)
 echo "📡 Starting Claude Code Router on port 3000..."
-ccr code &
+ccr start &
 ROUTER_PID=$!
 
 # Wait a moment for router to initialize
