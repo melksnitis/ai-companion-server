@@ -13,9 +13,11 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     
-    # Claude API Configuration
+    # API Keys
     anthropic_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-20250514"
+    openrouter_api_key: str = ""
+    
+    # Model Configuration (for reference - actual routing handled by Claude Code Router)
     max_tokens: int = 4096
     
     # Letta Configuration

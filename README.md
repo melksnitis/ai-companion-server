@@ -14,7 +14,8 @@ Built on the **Letta Learning SDK** pattern (inspired by [claude_research_agent]
 
 - **Continual Learning**: Automatic memory persistence across sessions via Letta
 - **Streaming Chat**: Real-time streaming responses via SSE and WebSocket
-- **Native Tool Execution**: Claude Agent SDK tools (Bash, Read, Write, Edit, Search, Glob)
+- **Claude Agent SDK**: Native tool execution (Bash, Read, Write, Edit, Search, Glob)
+- **Claude Code Router**: Intelligent model routing (DeepSeek, Claude, Gemini, local models)
 - **Persistent Memory**: Letta-managed memory blocks (human, persona, preferences, knowledge)
 - **Workspace Management**: File tree browsing and operations within a sandboxed workspace
 - **Conversation History**: SQLite-backed conversation storage
@@ -41,8 +42,10 @@ Built on the **Letta Learning SDK** pattern (inspired by [claude_research_agent]
 2. **Configure environment**:
    ```bash
    cp .env.example .env
-   # Edit .env and add your ANTHROPIC_API_KEY and LETTA_API_KEY
+   # Edit .env and add your OPENROUTER_API_KEY and LETTA_API_KEY
+   # Get OpenRouter API key at: https://openrouter.ai/keys
    # Get Letta API key at: https://app.letta.com
+   # Note: Model selection is handled by Claude Code Router (see router/config.json)
    ```
 
 3. **Run the server**:
