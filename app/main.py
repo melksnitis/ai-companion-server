@@ -1,3 +1,8 @@
+# CRITICAL: Apply Letta patch BEFORE any other imports
+# This uses wrapt's post import hooks to patch modules before they're cached
+from app.utils.letta_patch import apply_letta_patch
+apply_letta_patch()
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
