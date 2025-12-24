@@ -175,9 +175,9 @@ def remove_letta_patch():
     
     Useful for testing or cleanup.
     """
-    import agentic_learning.interceptors.utils as utils_module
+    global _original_save
     
-    # Restore original function
-    utils_module._save_conversation_turn_async = _original_save
-    
-    print("✓ Letta monkey patch removed", file=sys.stderr)
+    if _original_save:
+        import agentic_learning.interceptors.utils as utils_module
+        utils_module._save_conversation_turn_async = _original_save
+        print("✓ Letta monkey patch removed", file=sys.stderr)
