@@ -31,11 +31,13 @@ class AgentService:
         
         Model selection is handled by OpenRouter.
         Uses DeepSeek v3.2 by default, can be overridden with ANTHROPIC_DEFAULT_SONNET_MODEL env var.
+        Workspace is set to /app/workspace for file operations.
         """
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search"],
             model="deepseek/deepseek-v3.2",  # Use DeepSeek v3.2 via OpenRouter (supports tool use)
+            cwd="/app/workspace",  # Set working directory for file operations
         )
     
     async def stream_chat(
