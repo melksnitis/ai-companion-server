@@ -12,7 +12,7 @@
       "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
       "api_key": "${OPENROUTER_API_KEY}",
       "models": [
-        "deepseek/deepseek-chat"
+        "deepseek/deepseek-v3.2"
       ],
       "transformer": {
         "use": ["openrouter", "deepseek", "tool_use"]
@@ -20,10 +20,10 @@
     }
   ],
   "Router": {
-    "default": "openrouter,deepseek/deepseek-chat",
-    "background": "openrouter,deepseek/deepseek-chat",
-    "think": "openrouter,deepseek/deepseek-chat",
-    "longContext": "openrouter,deepseek/deepseek-chat",
+    "default": "openrouter,deepseek/deepseek-v3.2",
+    "background": "openrouter,deepseek/deepseek-v3.2",
+    "think": "openrouter,deepseek/deepseek-v3.2",
+    "longContext": "openrouter,deepseek/deepseek-v3.2",
     "longContextThreshold": 60000
   }
 }
