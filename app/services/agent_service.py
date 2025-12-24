@@ -11,7 +11,7 @@ from agentic_learning import learning
 
 from app.config import settings
 from app.models.schemas import ChatStreamEvent, ToolCall
-
+from app.utils.letta_patch import apply_letta_patch
 
 class AgentService:
     """Agent service using Claude Agent SDK with OpenRouter and Letta Learning SDK.
@@ -19,12 +19,16 @@ class AgentService:
     Architecture:
     - OpenRouter: Provides access to DeepSeek v3.2 and other models
     - Claude Agent SDK: Native tool execution (Bash, Read, Write, Edit, etc.)
-    - Letta Learning SDK: Persistent memory and continual learning
+    - Letta Learning SDK: Persistent memory and continual learning (patched)
 
     The learning context wraps the Claude Agent SDK to provide memory persistence.
+    A monkey patch enables Letta to accept DeepSeek conversations by overriding provider="letta".
     """
     
     def __init__(self):
+        # Apply Letta monkey patch BEFORE any learning context is used
+        apply_letta_patch()
+        
         # Configure Claude Agent SDK to use OpenRouter directly
         # Following OpenRouter's official guide: https://openrouter.ai/docs/guides/guides/claude-code-integration
         os.environ["ANTHROPIC_BASE_URL"] = "https://openrouter.ai/api"
