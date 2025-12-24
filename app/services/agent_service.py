@@ -30,12 +30,12 @@ class AgentService:
         """Configure Claude Agent SDK options with tools.
         
         Model selection is handled by OpenRouter.
-        Uses DeepSeek by default, can be overridden with ANTHROPIC_DEFAULT_SONNET_MODEL env var.
+        Uses DeepSeek v3.2 by default, can be overridden with ANTHROPIC_DEFAULT_SONNET_MODEL env var.
         """
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search"],
-            model="anthropic/claude-3.5-sonnet",  # Use Claude 3.5 Sonnet via OpenRouter (supports tool use)
+            model="deepseek/deepseek-v3.2",  # Use DeepSeek v3.2 via OpenRouter (supports tool use)
         )
     
     async def stream_chat(
@@ -70,7 +70,7 @@ class AgentService:
                 
                 yield ChatStreamEvent(
                     event_type="message_start",
-                    data={"agent_id": agent_id, "model": "anthropic/claude-3.5-sonnet", "provider": "OpenRouter"}
+                    data={"agent_id": agent_id, "model": "deepseek/deepseek-v3.2", "provider": "OpenRouter"}
                 )
                 
                 await client.query(prompt=message)
