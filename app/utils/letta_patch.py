@@ -109,6 +109,57 @@ def apply_letta_patch():
     # Patch utils module
     register_post_import_hook(_patch_utils_module, 'agentic_learning.interceptors.utils')
     
+    # Patch BaseAPIInterceptor to fix closure issue
+    def patch_base(module):
+        # Patch the intercept_async method to use dynamic PROVIDER lookup
+        original_intercept_async = module.BaseAPIInterceptor.intercept_async
+        
+        def patched_intercept_async(self, original_method):
+            import functools
+            interceptor = self
+            
+            @functools.wraps(original_method)
+            async def wrapper(self_arg, *args, **kwargs):
+                from agentic_learning.core import get_current_config
+                
+                config = get_current_config()
+                if not config:
+                    return await original_method(self_arg, *args, **kwargs)
+                
+                user_message = interceptor.extract_user_messages(*args, **kwargs)
+                kwargs = await interceptor._retrieve_and_inject_memory_async(config, kwargs)
+                is_streaming = kwargs.get('stream', False)
+                response = await original_method(self_arg, *args, **kwargs)
+                
+                if is_streaming:
+                    response._learning_user_message = user_message
+                    response._learning_model_name = kwargs.get('model', 'unknown')
+                    return interceptor.extract_assistant_message_streaming_async(response)
+                else:
+                    model_name = interceptor.extract_model_name(response=response, model_self=self_arg)
+                    response_dict = interceptor.build_response_dict(response=response)
+                    
+                    if response_dict.get("content"):
+                        from agentic_learning.interceptors.utils import _save_conversation_turn_async
+                        try:
+                            # FIX: Always use "letta" provider, not interceptor.PROVIDER
+                            await _save_conversation_turn_async(
+                                provider="letta",  # Hard-coded to bypass closure issue
+                                model=model_name,
+                                request_messages=interceptor.build_request_messages(user_message),
+                                response_dict=response_dict
+                            )
+                        except Exception as e:
+                            import sys
+                            print(f"[Warning] Failed to save conversation: {e}", file=sys.stderr)
+                    
+                    return response
+            
+            return wrapper
+        
+        module.BaseAPIInterceptor.intercept_async = patched_intercept_async
+        print(f"[PATCH] ✓ Patched BaseAPIInterceptor.intercept_async", file=sys.stderr)
+    
     # Patch interceptors - wrap __init__ to set instance PROVIDER
     def patch_claude(module):
         original_init = module.ClaudeInterceptor.__init__
@@ -132,6 +183,7 @@ def apply_letta_patch():
         module.AnthropicInterceptor.PROVIDER = "letta"
         print(f"[PATCH] ✓ Patched AnthropicInterceptor (class + instances)", file=sys.stderr)
     
+    register_post_import_hook(patch_base, 'agentic_learning.interceptors.base')
     register_post_import_hook(patch_claude, 'agentic_learning.interceptors.claude')
     register_post_import_hook(patch_anthropic, 'agentic_learning.interceptors.anthropic')
     
