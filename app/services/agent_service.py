@@ -35,7 +35,7 @@ class AgentService:
         """
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
-            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search"],
+            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch"],
             model="deepseek/deepseek-v3.2",  # Use DeepSeek v3.2 via OpenRouter (supports tool use)
             cwd="/app/workspace",  # Set working directory for file operations
         )
