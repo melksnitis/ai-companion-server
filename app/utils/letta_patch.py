@@ -67,7 +67,8 @@ async def _patched_save_conversation_turn_async(
                         lambda: client.agents.create(agent=agent, memory=memory)
                     )
                 
-                return await loop.run_in_executor(
+                print(f"[PATCH DEBUG] SYNC path - calling capture with provider='{patched_provider}'", file=sys.stderr)
+                result = await loop.run_in_executor(
                     None,
                     lambda: client.messages.capture(
                         agent=agent,
@@ -77,6 +78,8 @@ async def _patched_save_conversation_turn_async(
                         provider=patched_provider,
                     )
                 )
+                print(f"[PATCH DEBUG] ✅ SYNC Capture succeeded!", file=sys.stderr)
+                return result
         
         except Exception as e:
             print(f"[PATCH DEBUG] Exception: {e}", file=sys.stderr)
