@@ -95,10 +95,12 @@ async def _patched_save_conversation_turn_async(
 
 def _patch_utils_module(utils_module):
     """Callback: Patch utils when imported."""
-    global _original_save
+    global _original_save, _original_save_sync
     _original_save = utils_module._save_conversation_turn_async
+    _original_save_sync = utils_module._save_conversation_turn
     utils_module._save_conversation_turn_async = _patched_save_conversation_turn_async
-    print(f"[PATCH] ✓ Patched utils._save_conversation_turn_async", file=sys.stderr)
+    utils_module._save_conversation_turn = _patched_save_conversation_turn
+    print(f"[PATCH] ✓ Patched utils._save_conversation_turn (sync + async)", file=sys.stderr)
 
 
 def apply_letta_patch():
