@@ -129,7 +129,7 @@ def apply_letta_patch():
                 
                 # Patch BaseAPIInterceptor
                 from agentic_learning.interceptors import base as base_module
-                _patch_base_interceptor(base_module)
+                patch_base_interceptor(base_module)
                 
                 # Patch interceptor instances
                 from agentic_learning.interceptors.claude import ClaudeInterceptor
@@ -145,8 +145,8 @@ def apply_letta_patch():
     
     register_post_import_hook(patch_interceptors_init, 'agentic_learning.interceptors')
     
-    # Helper function to patch BaseAPIInterceptor
-    def _patch_base_interceptor(module):
+    # Patch BaseAPIInterceptor on import
+    def patch_base_interceptor(module):
         # Patch BOTH intercept (sync) and intercept_async methods
         
         # Patch intercept_async
@@ -266,7 +266,7 @@ def apply_letta_patch():
         module.AnthropicInterceptor.PROVIDER = "letta"
         print(f"[PATCH] ✓ Patched AnthropicInterceptor (class + instances)", file=sys.stderr)
     
-    register_post_import_hook(patch_base, 'agentic_learning.interceptors.base')
+    register_post_import_hook(patch_base_interceptor, 'agentic_learning.interceptors.base')
     register_post_import_hook(patch_claude, 'agentic_learning.interceptors.claude')
     register_post_import_hook(patch_anthropic, 'agentic_learning.interceptors.anthropic')
     
