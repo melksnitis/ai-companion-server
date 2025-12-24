@@ -1,5 +1,10 @@
-"""Utility modules for AI Companion Server."""
+"""Utility package for AI Companion Server."""
 
-from .letta_patch import apply_letta_patch, remove_letta_patch
+# Register custom OpenRouter interceptor with Letta
+from agentic_learning.interceptors import register_interceptor
+from app.interceptors.openrouter import OpenRouterInterceptor
 
-__all__ = ["apply_letta_patch", "remove_letta_patch"]
+register_interceptor(OpenRouterInterceptor)
+print("[App] ✓ Registered OpenRouterInterceptor with Letta", flush=True)
+
+__all__ = []

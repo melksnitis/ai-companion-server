@@ -11,7 +11,6 @@ from agentic_learning import learning
 
 from app.config import settings
 from app.models.schemas import ChatStreamEvent, ToolCall
-from app.utils.letta_patch import apply_letta_patch
 
 class AgentService:
     """Agent service using Claude Agent SDK with OpenRouter and Letta Learning SDK.
