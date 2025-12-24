@@ -39,8 +39,12 @@ async def _patched_save_conversation_turn_async(
     # Use the actual model name for tracking
     patched_model = model if model != "claude" else "deepseek/deepseek-v3.2"
     
+    # Debug logging
+    print(f"[PATCH DEBUG] Called with provider='{provider}', overriding to '{patched_provider}'", file=sys.stderr)
+    
     config = get_current_config()
     if not config:
+        print(f"[PATCH DEBUG] No config found, returning early", file=sys.stderr)
         return
     
     agent = config["agent_name"]
@@ -61,13 +65,16 @@ async def _patched_save_conversation_turn_async(
                 
                 if not agent_state:
                     agent_state = await client.agents.create(
-                        agent=agent,
+                p int(f"[PATCH DEBUG] Calling cli n .messages.capt re with provider='{patched_provider}'", file=sys.stderr)
+                 esult =  agent=agent,
                         memory=memory,
                     )
                 
                 return await client.messages.capture(
                     agent=agent,
-                    request_messages=request_messages or [],
+                 
+                print(f"[PATCH DEBUG] Capture succeeded!", file=sys.stderr)
+                return result   request_messages=request_messages or [],
                     response_dict=response_dict or {},
                     model=patched_model,  # Use patched model name
                     provider=patched_provider,  # Use "letta" provider
@@ -96,7 +103,8 @@ async def _patched_save_conversation_turn_async(
                     lambda: client.messages.capture(
                         agent=agent,
                         request_messages=request_messages or [],
-                        response_dict=response_dict or {},
+                     PATCH DEBUG] Exception in save_task: {e}", file=sys.stderr)
+            print(f"[   response_dict=response_dict or {},
                         model=patched_model,  # Use patched model name
                         provider=patched_provider,  # Use "letta" provider
                     )
