@@ -137,13 +137,28 @@ def apply_letta_patch():
     # Replace the original function with our patched version
     utils_module._save_conversation_turn_async = _patched_save_conversation_turn_async
     
-    # Also patch the ClaudeInterceptor PROVIDER constant
+    # Patch BOTH ClaudeInterceptor and AnthropicInterceptor PROVIDER constants
+    # (Claude Agent SDK might use AnthropicInterceptor when connecting via OpenRouter)
+    patched_interceptors = []
     try:
         from agentic_learning.interceptors.claude import ClaudeInterceptor
         ClaudeInterceptor.PROVIDER = "letta"
-        print("✓ Letta monkey patch applied: provider='letta', model='deepseek/deepseek-v3.2'", file=sys.stderr)
+        patched_interceptors.append("ClaudeInterceptor")
     except ImportError:
-        print("✓ Letta monkey patch applied (ClaudeInterceptor not found, using utils patch only)", file=sys.stderr)
+        pass
+    
+    try:
+        from agentic_learning.interceptors.anthropic import AnthropicInterceptor
+        AnthropicInterceptor.PROVIDER = "letta"
+        patched_interceptors.append("AnthropicInterceptor")
+    except ImportError:
+        pass
+    
+    if patched_interceptors:
+        print(f"✓ Letta monkey patch applied: provider='letta', model='deepseek/deepseek-v3.2'", file=sys.stderr)
+        print(f"  Patched: {', '.join(patched_interceptors)}", file=sys.stderr)
+    else:
+        print("✓ Letta monkey patch applied (interceptors not found, using utils patch only)", file=sys.stderr)
 
 
 def remove_letta_patch():
