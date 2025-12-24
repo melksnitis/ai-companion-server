@@ -122,6 +122,8 @@ def apply_letta_patch():
     This replaces the _save_conversation_turn_async function with our patched
     version that overrides provider="letta" to bypass validation.
     
+    Also patches ClaudeInterceptor.PROVIDER constant to use "letta".
+    
     Call this function before using the learning() context.
     """
     import agentic_learning
@@ -129,13 +131,19 @@ def apply_letta_patch():
     
     # Check version compatibility (optional warning)
     version = getattr(agentic_learning, '__version__', 'unknown')
-    if version not in ["0.4.3", "0.4.4", "unknown"]:
-        print(f"[Warning] Letta patch tested on v0.4.3, you have v{version}", file=sys.stderr)
+    if version not in ["0.4.3", "0.4.4", "0.1.0", "unknown"]:
+        print(f"[Warning] Letta patch tested on v0.4.3 and v0.1.0, you have v{version}", file=sys.stderr)
     
     # Replace the original function with our patched version
     utils_module._save_conversation_turn_async = _patched_save_conversation_turn_async
     
-    print("✓ Letta monkey patch applied: provider='letta', model='deepseek/deepseek-v3.2'", file=sys.stderr)
+    # Also patch the ClaudeInterceptor PROVIDER constant
+    try:
+        from agentic_learning.interceptors.claude import ClaudeInterceptor
+        ClaudeInterceptor.PROVIDER = "letta"
+        print("✓ Letta monkey patch applied: provider='letta', model='deepseek/deepseek-v3.2'", file=sys.stderr)
+    except ImportError:
+        print("✓ Letta monkey patch applied (ClaudeInterceptor not found, using utils patch only)", file=sys.stderr)
 
 
 def remove_letta_patch():
