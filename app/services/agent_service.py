@@ -25,9 +25,6 @@ class AgentService:
     """
     
     def __init__(self):
-        # Apply Letta monkey patch BEFORE any learning context is used
-        apply_letta_patch()
-        
         # Configure Claude Agent SDK to use OpenRouter directly
         # Following OpenRouter's official guide: https://openrouter.ai/docs/guides/guides/claude-code-integration
         os.environ["ANTHROPIC_BASE_URL"] = "https://openrouter.ai/api"
