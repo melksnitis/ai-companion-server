@@ -147,7 +147,9 @@ def apply_letta_patch():
     
     # Helper function to patch BaseAPIInterceptor
     def _patch_base_interceptor(module):
-        # Patch the intercept_async method to use dynamic PROVIDER lookup
+        # Patch BOTH intercept (sync) and intercept_async methods
+        
+        # Patch intercept_async
         original_intercept_async = module.BaseAPIInterceptor.intercept_async
         
         def patched_intercept_async(self, original_method):
@@ -160,11 +162,7 @@ def apply_letta_patch():
                 
                 config = get_current_config()
                 if not config:
-            BaseAPIInterceptor on import
-    def patch_base(module):
-        _patch_base_interceptor(module)
-    
-    # Patch         return await original_method(self_arg, *args, **kwargs)
+                    return await original_method(self_arg, *args, **kwargs)
                 
                 user_message = interceptor.extract_user_messages(*args, **kwargs)
                 kwargs = await interceptor._retrieve_and_inject_memory_async(config, kwargs)
@@ -182,9 +180,8 @@ def apply_letta_patch():
                     if response_dict.get("content"):
                         from agentic_learning.interceptors.utils import _save_conversation_turn_async
                         try:
-                            # FIX: Always use "letta" provider, not interceptor.PROVIDER
                             await _save_conversation_turn_async(
-                                provider="letta",  # Hard-coded to bypass closure issue
+                                provider="letta",
                                 model=model_name,
                                 request_messages=interceptor.build_request_messages(user_message),
                                 response_dict=response_dict
@@ -197,8 +194,54 @@ def apply_letta_patch():
             
             return wrapper
         
+        # Patch intercept (sync)
+        original_intercept = module.BaseAPIInterceptor.intercept
+        
+        def patched_intercept(self, original_method):
+            import functools
+            interceptor = self
+            
+            @functools.wraps(original_method)
+            def wrapper(self_arg, *args, **kwargs):
+                from agentic_learning.core import get_current_config
+                
+                config = get_current_config()
+                if not config:
+                    return original_method(self_arg, *args, **kwargs)
+                
+                user_message = interceptor.extract_user_messages(*args, **kwargs)
+                kwargs = interceptor._retrieve_and_inject_memory(config, kwargs)
+                is_streaming = kwargs.get('stream', False)
+                response = original_method(self_arg, *args, **kwargs)
+                
+                if is_streaming:
+                    response._learning_user_message = user_message
+                    response._learning_model_name = kwargs.get('model', 'unknown')
+                    return interceptor.extract_assistant_message_streaming(response)
+                else:
+                    model_name = interceptor.extract_model_name(response=response, model_self=self_arg)
+                    response_dict = interceptor.build_response_dict(response=response)
+                    
+                    if response_dict.get("content"):
+                        from agentic_learning.interceptors.utils import _save_conversation_turn
+                        try:
+                            _save_conversation_turn(
+                                provider="letta",
+                                model=model_name,
+                                request_messages=interceptor.build_request_messages(user_message),
+                                response_dict=response_dict
+                            )
+                        except Exception as e:
+                            import sys
+                            print(f"[Warning] Failed to save conversation: {e}", file=sys.stderr)
+                    
+                    return response
+            
+            return wrapper
+        
+        module.BaseAPIInterceptor.intercept = patched_intercept
         module.BaseAPIInterceptor.intercept_async = patched_intercept_async
-        print(f"[PATCH] ✓ Patched BaseAPIInterceptor.intercept_async", file=sys.stderr)
+        print(f"[PATCH] ✓ Patched BaseAPIInterceptor.intercept (sync + async)", file=sys.stderr)
     
     # Patch interceptors - wrap __init__ to set instance PROVIDER
     def patch_claude(module):
