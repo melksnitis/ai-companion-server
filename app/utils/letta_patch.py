@@ -109,8 +109,44 @@ def apply_letta_patch():
     # Patch utils module
     register_post_import_hook(_patch_utils_module, 'agentic_learning.interceptors.utils')
     
-    # Patch BaseAPIInterceptor to fix closure issue
-    def patch_base(module):
+    # CRITICAL: Patch the install() function to re-apply our patches AFTER it runs
+    def patch_interceptors_init(module):
+        original_install = module.install
+        
+        def patched_install():
+            # Call original install
+            original_install()
+            print("[PATCH] Interceptors installed by Letta, re-applying patches...", file=sys.stderr)
+            
+            # Re-apply ALL our patches AFTER Letta's install
+            try:
+                # Patch utils
+                from agentic_learning.interceptors import utils as utils_module
+                global _original_save
+                _original_save = utils_module._save_conversation_turn_async
+                utils_module._save_conversation_turn_async = _patched_save_conversation_turn_async
+                print("[PATCH] ✓ Re-patched utils", file=sys.stderr)
+                
+                # Patch BaseAPIInterceptor
+                from agentic_learning.interceptors import base as base_module
+                _patch_base_interceptor(base_module)
+                
+                # Patch interceptor instances
+                from agentic_learning.interceptors.claude import ClaudeInterceptor
+                from agentic_learning.interceptors.anthropic import AnthropicInterceptor
+                ClaudeInterceptor.PROVIDER = "letta"
+                AnthropicInterceptor.PROVIDER = "letta"
+                print("[PATCH] ✓ Re-patched interceptor PROVIDER constants", file=sys.stderr)
+            except Exception as e:
+                print(f"[PATCH] ⚠️ Error re-applying patches: {e}", file=sys.stderr)
+        
+        module.install = patched_install
+        print("[PATCH] ✓ Wrapped interceptors.install()", file=sys.stderr)
+    
+    register_post_import_hook(patch_interceptors_init, 'agentic_learning.interceptors')
+    
+    # Helper function to patch BaseAPIInterceptor
+    def _patch_base_interceptor(module):
         # Patch the intercept_async method to use dynamic PROVIDER lookup
         original_intercept_async = module.BaseAPIInterceptor.intercept_async
         
@@ -124,7 +160,11 @@ def apply_letta_patch():
                 
                 config = get_current_config()
                 if not config:
-                    return await original_method(self_arg, *args, **kwargs)
+            BaseAPIInterceptor on import
+    def patch_base(module):
+        _patch_base_interceptor(module)
+    
+    # Patch         return await original_method(self_arg, *args, **kwargs)
                 
                 user_message = interceptor.extract_user_messages(*args, **kwargs)
                 kwargs = await interceptor._retrieve_and_inject_memory_async(config, kwargs)
