@@ -1,14 +1,14 @@
 """
 Custom OpenRouter Interceptor for Letta Learning SDK.
-Supports DeepSeek and other models via OpenRouter with OpenAI-compatible API.
+Extends ClaudeInterceptor (subprocess-based) with provider='openai' for OpenRouter.
 """
 
 import sys
 from typing import Any, Dict, List
-from agentic_learning.interceptors.base import BaseAPIInterceptor
+from agentic_learning.interceptors.claude import ClaudeInterceptor
 
 
-class OpenRouterInterceptor(BaseAPIInterceptor):
+class OpenRouterInterceptor(ClaudeInterceptor):
     """
     Interceptor for OpenRouter API calls using Anthropic SDK.
     Uses provider='openai' since OpenRouter is OpenAI-compatible.
@@ -30,18 +30,32 @@ class OpenRouterInterceptor(BaseAPIInterceptor):
         try:
             from anthropic.resources.messages import Messages, AsyncMessages
         except ImportError:
-            print("[OpenRouterInterceptor] ⚠️ Anthropic SDK not available", file=sys.stderr)
+            print("[OpenRouterInterceptor] ⚠️ Anthropic SDK not available", file=sys.stderr, flush=True)
             return
         
         # Store original methods
         self._original_methods['messages_create'] = Messages.create
         self._original_methods['async_messages_create'] = AsyncMessages.create
         
+        print(f"[OpenRouterInterceptor] Patching AsyncMessages.create...", file=sys.stderr, flush=True)
+        
         # Patch with wrapped versions
         Messages.create = self.intercept(self._original_methods['messages_create'])
         AsyncMessages.create = self.intercept_async(self._original_methods['async_messages_create'])
         
-        print("[OpenRouterInterceptor] ✓ Patched Anthropic SDK for OpenRouter", file=sys.stderr)
+        print(f"[OpenRouterInterceptor] ✓ Patched - PROVIDER='{self.PROVIDER}'", file=sys.stderr, flush=True)
+        
+        # Add debug wrapper to verify calls are being intercepted
+        original_async_create = AsyncMessages.create
+        
+        async def debug_wrapper(*args, **kwargs):
+            print(f"[OpenRouterInterceptor] 🎯 AsyncMessages.create CALLED!", file=sys.stderr, flush=True)
+            result = await original_async_create(*args, **kwargs)
+            print(f"[OpenRouterInterceptor] 🎯 AsyncMessages.create RETURNED", file=sys.stderr, flush=True)
+            return result
+        
+        AsyncMessages.create = debug_wrapper
+        print("[OpenRouterInterceptor] ✓ Added debug wrapper", file=sys.stderr, flush=True)
     
     def uninstall(self):
         """Uninstall interceptor and restore original methods."""

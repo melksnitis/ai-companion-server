@@ -6,21 +6,17 @@ from typing import List, Optional, Union
 
 def _monkey_patch_learning_function():
     """
-    Install ClaudeInterceptor (subprocess-based) but patch it to use PROVIDER='openai'.
-    
-    Claude Agent SDK uses SubprocessCLITransport (spawns claude CLI subprocess),
-    NOT the Anthropic SDK, so we need ClaudeInterceptor instead of AnthropicInterceptor.
+    Replace learning() with custom version that accepts interceptor_class parameter.
+    This allows us to control which interceptor is used per-context.
     """
     try:
+        import agentic_learning
         from agentic_learning import core
         from agentic_learning.interceptors import registry
         from agentic_learning.interceptors.claude import ClaudeInterceptor
         
-        # Patch ClaudeInterceptor to use PROVIDER='openai' for OpenRouter
+        # Patch ClaudeInterceptor to use PROVIDER='openai'
         ClaudeInterceptor.PROVIDER = "openai"
-        print(f"[App] ✓ Patched ClaudeInterceptor.PROVIDER = 'openai'", file=sys.stderr, flush=True)
-        
-        # Patch __init__ to set instance PROVIDER
         original_init = ClaudeInterceptor.__init__
         
         def patched_init(self, *args, **kwargs):
@@ -28,34 +24,50 @@ def _monkey_patch_learning_function():
             self.PROVIDER = "openai"
         
         ClaudeInterceptor.__init__ = patched_init
-        print(f"[App] ✓ Patched ClaudeInterceptor.__init__", file=sys.stderr, flush=True)
+        print(f"[App] ✓ Patched ClaudeInterceptor.PROVIDER = 'openai'", file=sys.stderr, flush=True)
         
-        # Patch _wrap_message_iterator to add debug logging
-        original_wrap = ClaudeInterceptor._wrap_message_iterator
+        # Store original learning function
+        original_learning = core.learning
         
-        def debug_wrap(self, original_iterator, config):
-            print(f"[Claude] _wrap_message_iterator called", file=sys.stderr, flush=True)
-            result = original_wrap(self, original_iterator, config)
-            print(f"[Claude] _wrap_message_iterator returning wrapped iterator", file=sys.stderr, flush=True)
-            return result
+        def custom_learning(
+            agent: str = "letta_agent",
+            client: Optional[Union["AgenticLearning", "AsyncAgenticLearning"]] = None,
+            capture_only: bool = False,
+            memory: List[str] = ["human"],
+            interceptor_class = None,  # NEW: Allow specifying interceptor class
+        ):
+            """
+            Custom learning() that accepts interceptor_class parameter.
+            If interceptor_class is provided, installs only that interceptor.
+            Otherwise falls back to default behavior.
+            """
+            # If specific interceptor requested, install only that one
+            if interceptor_class is not None and not core._INTERCEPTORS_INSTALLED:
+                print(f"[App] Installing custom interceptor: {interceptor_class.__name__}", file=sys.stderr, flush=True)
+                
+                if interceptor_class.is_available():
+                    interceptor = interceptor_class()
+                    interceptor.install()
+                    registry._INSTALLED_INTERCEPTORS.append(interceptor)
+                    print(f"[App] ✓ Installed {interceptor_class.__name__} (PROVIDER='{interceptor.PROVIDER}')", file=sys.stderr, flush=True)
+                
+                core._INTERCEPTORS_INSTALLED = True
+            
+            # Return the original LearningContext
+            return core.LearningContext(
+                agent=agent,
+                client=client,
+                capture_only=capture_only,
+                memory=memory,
+            )
         
-        ClaudeInterceptor._wrap_message_iterator = debug_wrap
+        # Replace learning() in both places
+        core.learning = custom_learning
+        agentic_learning.learning = custom_learning
         
-        # Install ClaudeInterceptor
-        if ClaudeInterceptor.is_available():
-            interceptor = ClaudeInterceptor()
-            interceptor.install()
-            registry._INSTALLED_INTERCEPTORS.append(interceptor)
-            print(f"[App] ✓ Installed ClaudeInterceptor (PROVIDER='openai')", file=sys.stderr, flush=True)
-        else:
-            print(f"[App] ✗ ClaudeInterceptor not available", file=sys.stderr, flush=True)
-            return
+        print("[App] ✓ Monkey patched learning() to accept interceptor_class", file=sys.stderr, flush=True)
         
-        # Block auto-install
-        core._INTERCEPTORS_INSTALLED = True
-        print(f"[App] ✓ Blocked Letta auto-install", file=sys.stderr, flush=True)
-        
-        # Patch save functions as extra safety
+        # Patch save functions to force provider='openai'
         from agentic_learning.interceptors import utils
         
         original_save_async = utils._save_conversation_turn_async
@@ -72,4 +84,4 @@ def _monkey_patch_learning_function():
         import traceback
         traceback.print_exc(file=sys.stderr)
 
-_install_claude_interceptor_with_openai_provider()
+_monkey_patch_learning_function()
