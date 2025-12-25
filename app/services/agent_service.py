@@ -7,9 +7,10 @@ Based on: https://github.com/letta-ai/learning-sdk/blob/main/examples/claude_res
 import os
 from typing import AsyncGenerator, Optional, List, Dict, Any
 from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, TextBlock, ToolUseBlock
-from agentic_learning import learning
+import agentic_learning  # Import module to get patched version
 
 from app.config import settings
+from app.interceptors.openrouter import OpenRouterInterceptor
 from app.models.schemas import ChatStreamEvent, ToolCall
 
 class AgentService:
@@ -76,7 +77,8 @@ class AgentService:
         
         try:
             # Wrap Claude Agent SDK in Letta learning context for memory persistence
-            async with learning(agent=agent_id, memory=memory_config):
+            # Use module reference (agentic_learning.learning) to get patched version
+            async with agentic_learning.learning(agent=agent_id, memory=memory_config, interceptor_class=OpenRouterInterceptor):
                 async with ClaudeSDKClient(options=options) as client:
                     yield ChatStreamEvent(
                         event_type="thinking_stop",

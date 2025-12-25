@@ -4,6 +4,8 @@
 import sys
 from typing import List, Optional, Union
 
+print("[App __init__] Starting app/__init__.py", file=sys.stderr, flush=True)
+
 def _monkey_patch_learning_function():
     """
     Replace learning() with custom version that accepts interceptor_class parameter.
@@ -56,6 +58,9 @@ def _monkey_patch_learning_function():
         core.learning = custom_learning
         agentic_learning.learning = custom_learning
         
+        # Verify the patch worked
+        print(f"[App] core.learning is custom: {core.learning is custom_learning}", file=sys.stderr, flush=True)
+        print(f"[App] agentic_learning.learning is custom: {agentic_learning.learning is custom_learning}", file=sys.stderr, flush=True)
         print("[App] ✓ Monkey patched learning() to accept interceptor_class", file=sys.stderr, flush=True)
         
         # Patch save functions to force provider='openai'
