@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y \
 # Install Claude Code Router globally
 RUN npm install -g @anthropic-ai/claude-code @musistudio/claude-code-router
 
+# Copy local Letta SDK for installation
+COPY letta-sdk /letta-sdk
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 
