@@ -1,56 +1,72 @@
 """AI Companion Server Application Package"""
 
-# Manual interceptor installation to control which interceptor is used
+# Use ClaudeInterceptor (subprocess) with PROVIDER='openai' for OpenRouter
 import sys
 
-def _install_openrouter_interceptor_only():
+def _install_claude_interceptor_with_openai_provider():
     """
-    Manually install only OpenRouterInterceptor and prevent Letta from auto-installing defaults.
+    Install ClaudeInterceptor (subprocess-based) but patch it to use PROVIDER='openai'.
     
-    This bypasses Letta's _ensure_interceptors_installed() which would install ALL interceptors.
+    Claude Agent SDK uses SubprocessCLITransport (spawns claude CLI subprocess),
+    NOT the Anthropic SDK, so we need ClaudeInterceptor instead of AnthropicInterceptor.
     """
     try:
         from agentic_learning import core
         from agentic_learning.interceptors import registry
-        from app.interceptors.openrouter import OpenRouterInterceptor
+        from agentic_learning.interceptors.claude import ClaudeInterceptor
         
-        # Install only our OpenRouterInterceptor
-        if OpenRouterInterceptor.is_available():
-            interceptor = OpenRouterInterceptor()
+        # Patch ClaudeInterceptor to use PROVIDER='openai' for OpenRouter
+        ClaudeInterceptor.PROVIDER = "openai"
+        print(f"[App] ✓ Patched ClaudeInterceptor.PROVIDER = 'openai'", file=sys.stderr, flush=True)
+        
+        # Patch extract_model_name to return OpenRouter model format
+        original_extract_model = ClaudeInterceptor.extract_model_name
+        
+        def patched_extract_model(self, response=None, model_self=None):
+            return "openai-proxy/deepseek/deepseek-v3.2"
+        
+        ClaudeInterceptor.extract_model_name = patched_extract_model
+        print(f"[App] ✓ Patched ClaudeInterceptor.extract_model_name", file=sys.stderr, flush=True)
+        
+        # Patch __init__ to set instance PROVIDER
+        original_init = ClaudeInterceptor.__init__
+        
+        def patched_init(self, *args, **kwargs):
+            original_init(self, *args, **kwargs)
+            self.PROVIDER = "openai"
+        
+        ClaudeInterceptor.__init__ = patched_init
+        print(f"[App] ✓ Patched ClaudeInterceptor.__init__", file=sys.stderr, flush=True)
+        
+        # Install ClaudeInterceptor
+        if ClaudeInterceptor.is_available():
+            interceptor = ClaudeInterceptor()
             interceptor.install()
             registry._INSTALLED_INTERCEPTORS.append(interceptor)
-            print(f"[App] ✓ Installed OpenRouterInterceptor (PROVIDER='openai')", file=sys.stderr, flush=True)
+            print(f"[App] ✓ Installed ClaudeInterceptor (PROVIDER='openai')", file=sys.stderr, flush=True)
         else:
-            print(f"[App] ✗ OpenRouterInterceptor not available", file=sys.stderr, flush=True)
+            print(f"[App] ✗ ClaudeInterceptor not available", file=sys.stderr, flush=True)
             return
         
-        # Mark interceptors as installed to prevent Letta from auto-installing
+        # Block auto-install
         core._INTERCEPTORS_INSTALLED = True
-        print(f"[App] ✓ Blocked Letta auto-install - using OpenRouterInterceptor only", file=sys.stderr, flush=True)
+        print(f"[App] ✓ Blocked Letta auto-install", file=sys.stderr, flush=True)
         
-        # Patch save functions to force provider='openai' as extra safety
+        # Patch save functions as extra safety
         from agentic_learning.interceptors import utils
         
         original_save_async = utils._save_conversation_turn_async
-        original_save_sync = utils._save_conversation_turn
         
         async def patched_save_async(provider, model, request_messages, response_dict):
             print(f"[Save] provider={provider}, model={model}", file=sys.stderr, flush=True)
-            # Force openai provider and openrouter model format
             return await original_save_async("openai", "openai-proxy/deepseek/deepseek-v3.2", request_messages, response_dict)
         
-        def patched_save_sync(provider, model, request_messages, response_dict):
-            print(f"[Save Sync] provider={provider}, model={model}", file=sys.stderr, flush=True)
-            return original_save_sync("openai", "openai-proxy/deepseek/deepseek-v3.2", request_messages, response_dict)
-        
         utils._save_conversation_turn_async = patched_save_async
-        utils._save_conversation_turn = patched_save_sync
-        
-        print("[App] ✓ Patched save functions to force provider='openai'", file=sys.stderr, flush=True)
+        print("[App] ✓ Patched save function to force provider='openai'", file=sys.stderr, flush=True)
         
     except Exception as e:
         print(f"[App] ✗ Setup failed: {e}", file=sys.stderr, flush=True)
         import traceback
         traceback.print_exc(file=sys.stderr)
 
-_install_openrouter_interceptor_only()
+_install_claude_interceptor_with_openai_provider()
