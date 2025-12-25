@@ -1,9 +1,10 @@
 """AI Companion Server Application Package"""
 
-# Use ClaudeInterceptor (subprocess) with PROVIDER='openai' for OpenRouter
+# Monkey patch learning() to accept interceptor parameter
 import sys
+from typing import List, Optional, Union
 
-def _install_claude_interceptor_with_openai_provider():
+def _monkey_patch_learning_function():
     """
     Install ClaudeInterceptor (subprocess-based) but patch it to use PROVIDER='openai'.
     
@@ -19,15 +20,6 @@ def _install_claude_interceptor_with_openai_provider():
         ClaudeInterceptor.PROVIDER = "openai"
         print(f"[App] ✓ Patched ClaudeInterceptor.PROVIDER = 'openai'", file=sys.stderr, flush=True)
         
-        # Patch extract_model_name to return OpenRouter model format
-        original_extract_model = ClaudeInterceptor.extract_model_name
-        
-        def patched_extract_model(self, response=None, model_self=None):
-            return "openai-proxy/deepseek/deepseek-v3.2"
-        
-        ClaudeInterceptor.extract_model_name = patched_extract_model
-        print(f"[App] ✓ Patched ClaudeInterceptor.extract_model_name", file=sys.stderr, flush=True)
-        
         # Patch __init__ to set instance PROVIDER
         original_init = ClaudeInterceptor.__init__
         
@@ -37,6 +29,17 @@ def _install_claude_interceptor_with_openai_provider():
         
         ClaudeInterceptor.__init__ = patched_init
         print(f"[App] ✓ Patched ClaudeInterceptor.__init__", file=sys.stderr, flush=True)
+        
+        # Patch _wrap_message_iterator to add debug logging
+        original_wrap = ClaudeInterceptor._wrap_message_iterator
+        
+        def debug_wrap(self, original_iterator, config):
+            print(f"[Claude] _wrap_message_iterator called", file=sys.stderr, flush=True)
+            result = original_wrap(self, original_iterator, config)
+            print(f"[Claude] _wrap_message_iterator returning wrapped iterator", file=sys.stderr, flush=True)
+            return result
+        
+        ClaudeInterceptor._wrap_message_iterator = debug_wrap
         
         # Install ClaudeInterceptor
         if ClaudeInterceptor.is_available():
