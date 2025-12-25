@@ -1,39 +1,34 @@
 """AI Companion Server Application Package"""
 
-# Override Letta's interceptor system to use only our OpenRouter interceptor
+# Monkey patch AnthropicInterceptor to use provider='openai'
 import sys
-from app.interceptors.openrouter import OpenRouterInterceptor
 
-def _setup_interceptor():
-    """Setup custom interceptor to replace default ones."""
-    from agentic_learning.interceptors import registry
-    
-    # Store original install
-    _original_install = registry.install
-    
-    def _custom_install():
-        """Custom install that only installs OpenRouterInterceptor."""
-        installed = []
+def _patch_anthropic_interceptor():
+    """Patch AnthropicInterceptor.PROVIDER to 'openai' for OpenRouter compatibility."""
+    try:
+        from agentic_learning.interceptors.anthropic import AnthropicInterceptor
         
-        if OpenRouterInterceptor.is_available():
-            try:
-                interceptor = OpenRouterInterceptor()
-                interceptor.install()
-                registry._INSTALLED_INTERCEPTORS.append(interceptor)
-                installed.append('OpenRouterInterceptor')
-                print(f"[App] ✓ Installed OpenRouterInterceptor (provider='openai')", file=sys.stderr, flush=True)
-            except Exception as e:
-                print(f"[App] ✗ Failed: {e}", file=sys.stderr, flush=True)
+        # Patch the class attribute
+        AnthropicInterceptor.PROVIDER = "openai"
         
-        return installed
-    
-    # Replace install function
-    registry.install = _custom_install
-    
-    # Also patch in main module
-    import agentic_learning.interceptors
-    agentic_learning.interceptors.install = _custom_install
-    
-    print("[App] ✓ Overrode install() for OpenRouterInterceptor only", file=sys.stderr, flush=True)
+        # Also patch the instance creation to ensure all instances use openai
+        original_init = AnthropicInterceptor.__init__
+        
+        def patched_init(self, *args, **kwargs):
+            original_init(self, *args, **kwargs)
+            self.PROVIDER = "openai"
+        
+        AnthropicInterceptor.__init__ = patched_init
+        
+        # Override extract_model_name to return OpenRouter model format
+        def patched_extract_model_name(self, response=None, model_self=None):
+            return "openai-proxy/deepseek/deepseek-v3.2"
+        
+        AnthropicInterceptor.extract_model_name = patched_extract_model_name
+        
+        print("[App] ✓ Patched AnthropicInterceptor: PROVIDER='openai', model='openai-proxy/deepseek/deepseek-v3.2'", file=sys.stderr, flush=True)
+        
+    except Exception as e:
+        print(f"[App] ✗ Failed to patch AnthropicInterceptor: {e}", file=sys.stderr, flush=True)
 
-_setup_interceptor()
+_patch_anthropic_interceptor()
