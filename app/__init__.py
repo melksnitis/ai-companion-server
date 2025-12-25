@@ -1,34 +1,39 @@
 """AI Companion Server Application Package"""
 
-# Monkey patch AnthropicInterceptor to use provider='openai'
+# Monkey patch to force provider='openai' at the save level
 import sys
 
-def _patch_anthropic_interceptor():
-    """Patch AnthropicInterceptor.PROVIDER to 'openai' for OpenRouter compatibility."""
+def _patch_save_conversation():
+    """Patch _save_conversation_turn_async to force provider='openai'."""
     try:
-        from agentic_learning.interceptors.anthropic import AnthropicInterceptor
+        from agentic_learning.interceptors import utils
         
-        # Patch the class attribute
-        AnthropicInterceptor.PROVIDER = "openai"
+        # Store original
+        original_save_async = utils._save_conversation_turn_async
+        original_save_sync = utils._save_conversation_turn
         
-        # Also patch the instance creation to ensure all instances use openai
-        original_init = AnthropicInterceptor.__init__
+        async def patched_save_async(provider, model, request_messages, response_dict):
+            """Force provider='openai' and model to OpenRouter format."""
+            print(f"[Save Debug] Original: provider={provider}, model={model}", file=sys.stderr, flush=True)
+            forced_provider = "openai"
+            forced_model = "openai-proxy/deepseek/deepseek-v3.2"
+            print(f"[Save Debug] Forced: provider={forced_provider}, model={forced_model}", file=sys.stderr, flush=True)
+            return await original_save_async(forced_provider, forced_model, request_messages, response_dict)
         
-        def patched_init(self, *args, **kwargs):
-            original_init(self, *args, **kwargs)
-            self.PROVIDER = "openai"
+        def patched_save_sync(provider, model, request_messages, response_dict):
+            """Force provider='openai' and model to OpenRouter format."""
+            print(f"[Save Debug] Sync Original: provider={provider}, model={model}", file=sys.stderr, flush=True)
+            forced_provider = "openai"
+            forced_model = "openai-proxy/deepseek/deepseek-v3.2"
+            print(f"[Save Debug] Sync Forced: provider={forced_provider}, model={forced_model}", file=sys.stderr, flush=True)
+            return original_save_sync(forced_provider, forced_model, request_messages, response_dict)
         
-        AnthropicInterceptor.__init__ = patched_init
+        utils._save_conversation_turn_async = patched_save_async
+        utils._save_conversation_turn = patched_save_sync
         
-        # Override extract_model_name to return OpenRouter model format
-        def patched_extract_model_name(self, response=None, model_self=None):
-            return "openai-proxy/deepseek/deepseek-v3.2"
-        
-        AnthropicInterceptor.extract_model_name = patched_extract_model_name
-        
-        print("[App] ✓ Patched AnthropicInterceptor: PROVIDER='openai', model='openai-proxy/deepseek/deepseek-v3.2'", file=sys.stderr, flush=True)
+        print("[App] ✓ Patched _save_conversation_turn to force provider='openai'", file=sys.stderr, flush=True)
         
     except Exception as e:
-        print(f"[App] ✗ Failed to patch AnthropicInterceptor: {e}", file=sys.stderr, flush=True)
+        print(f"[App] ✗ Failed to patch save functions: {e}", file=sys.stderr, flush=True)
 
-_patch_anthropic_interceptor()
+_patch_save_conversation()
