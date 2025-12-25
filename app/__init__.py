@@ -13,18 +13,6 @@ def _monkey_patch_learning_function():
         import agentic_learning
         from agentic_learning import core
         from agentic_learning.interceptors import registry
-        from agentic_learning.interceptors.claude import ClaudeInterceptor
-        
-        # Patch ClaudeInterceptor to use PROVIDER='openai'
-        ClaudeInterceptor.PROVIDER = "openai"
-        original_init = ClaudeInterceptor.__init__
-        
-        def patched_init(self, *args, **kwargs):
-            original_init(self, *args, **kwargs)
-            self.PROVIDER = "openai"
-        
-        ClaudeInterceptor.__init__ = patched_init
-        print(f"[App] ✓ Patched ClaudeInterceptor.PROVIDER = 'openai'", file=sys.stderr, flush=True)
         
         # Store original learning function
         original_learning = core.learning
@@ -41,6 +29,9 @@ def _monkey_patch_learning_function():
             If interceptor_class is provided, installs only that interceptor.
             Otherwise falls back to default behavior.
             """
+            print(f"[CUSTOM LEARNING] ✓ Called! agent={agent}, interceptor_class={interceptor_class}", file=sys.stderr, flush=True)
+            print(f"[CUSTOM LEARNING] _INTERCEPTORS_INSTALLED={core._INTERCEPTORS_INSTALLED}", file=sys.stderr, flush=True)
+            
             # If specific interceptor requested, install only that one
             if interceptor_class is not None and not core._INTERCEPTORS_INSTALLED:
                 print(f"[App] Installing custom interceptor: {interceptor_class.__name__}", file=sys.stderr, flush=True)
@@ -72,9 +63,9 @@ def _monkey_patch_learning_function():
         
         original_save_async = utils._save_conversation_turn_async
         
-        async def patched_save_async(provider, model, request_messages, response_dict):
+        async def patched_save_async(provider, model, request_messages, response_dict, register_task=None):
             print(f"[Save] provider={provider}, model={model}", file=sys.stderr, flush=True)
-            return await original_save_async("openai", "openai-proxy/deepseek/deepseek-v3.2", request_messages, response_dict)
+            return await original_save_async("openai", "openai-proxy/deepseek/deepseek-v3.2", request_messages, response_dict, register_task=register_task)
         
         utils._save_conversation_turn_async = patched_save_async
         print("[App] ✓ Patched save function to force provider='openai'", file=sys.stderr, flush=True)
