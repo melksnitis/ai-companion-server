@@ -69,8 +69,48 @@ def _monkey_patch_learning_function():
         original_save_async = utils._save_conversation_turn_async
         
         async def patched_save_async(provider, model, request_messages, response_dict, register_task=None):
-            print(f"[Save] provider={provider}, model={model}", file=sys.stderr, flush=True)
-            return await original_save_async("openai", "openai-proxy/deepseek/deepseek-v3.2", request_messages, response_dict, register_task=register_task)
+            # Force provider to 'openai' for OpenRouter compatibility
+            forced_provider = "openai"
+            forced_model = "deepseek-v3"
+            print(f"[Save] provider={forced_provider}, model={forced_model}", file=sys.stderr, flush=True)
+            
+            # Get config and call API directly
+            from agentic_learning.core import get_current_config
+            config = get_current_config()
+            if not config:
+                print(f"[Save] No config - skipping", file=sys.stderr, flush=True)
+                return None
+                
+            agent = config.get("agent_name")
+            client = config.get("client")
+            memory = config.get("memory")
+            
+            if not client:
+                print(f"[Save] No client - skipping", file=sys.stderr, flush=True)
+                return None
+            
+            try:
+                import asyncio
+                # Try direct API call with timeout
+                print(f"[Save] Saving to agent={agent}...", file=sys.stderr, flush=True)
+                result = await asyncio.wait_for(
+                    client.messages.capture(
+                        agent=agent,
+                        request_messages=request_messages or [],
+                        response_dict=response_dict or {},
+                        model=forced_model,
+                        provider=forced_provider,
+                    ),
+                    timeout=5.0
+                )
+                print(f"[Save] SUCCESS", file=sys.stderr, flush=True)
+                return result
+            except asyncio.TimeoutError:
+                print(f"[Save] TIMEOUT - Letta server not responding", file=sys.stderr, flush=True)
+                return None
+            except Exception as e:
+                print(f"[Save] ERROR: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+                return None
         
         utils._save_conversation_turn_async = patched_save_async
         print("[App] ✓ Patched save function to force provider='openai'", file=sys.stderr, flush=True)
