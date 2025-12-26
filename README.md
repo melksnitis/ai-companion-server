@@ -12,7 +12,9 @@ Built on the **Letta Learning SDK** pattern (inspired by [claude_research_agent]
 
 ## Features
 
+- **Session Management**: Native Claude SDK session continuity with automatic resumption
 - **Continual Learning**: Automatic memory persistence across sessions via Letta
+- **Two-Layer Memory**: Short-term (session history) + Long-term (Letta memory blocks)
 - **Streaming Chat**: Real-time streaming responses via SSE and WebSocket
 - **Claude Agent SDK**: Native tool execution (Bash, Read, Write, Edit, Search, Glob)
 - **Claude Code Router**: Intelligent model routing (DeepSeek, Claude, Gemini, local models)
@@ -142,6 +144,53 @@ The assistant has access to Claude Agent SDK native tools:
 | `Edit` | Find and replace text in files |
 | `Glob` | List files matching patterns |
 | `Search` | Search for patterns in files |
+
+## Session Management
+
+**Two-layer conversation continuity:**
+
+1. **Short-term (Claude SDK Sessions)**: Native conversation history, tool context, file edits
+2. **Long-term (Letta Memory)**: Cross-session facts, preferences, learned knowledge
+
+### Automatic Behavior
+
+Sessions are automatically managed by default:
+
+```bash
+# First message - creates session
+curl -X POST http://localhost:8000/chat/stream \
+  -d '{"message": "My favorite color is blue", "conversation_id": "conv-1"}'
+# Returns: session_id event
+
+# Second message - auto-resumes
+curl -X POST http://localhost:8000/chat/stream \
+  -d '{"message": "What is my favorite color?", "conversation_id": "conv-1"}'
+# Agent remembers: "You said your favorite color is blue"
+```
+
+### Explicit Control
+
+Pass `session_id` to override automatic behavior:
+
+```bash
+# Resume specific session
+curl -X POST http://localhost:8000/chat/stream \
+  -d '{
+    "message": "Continue from where we left off",
+    "conversation_id": "conv-1",
+    "session_id": "4dc88e4a-26d5-42f9-b58b-88bb880bbad2"
+  }'
+
+# Start fresh (fork conversation)
+curl -X POST http://localhost:8000/chat/stream \
+  -d '{
+    "message": "Try a different approach",
+    "conversation_id": "conv-1",
+    "session_id": null
+  }'
+```
+
+**📖 See [docs/SESSION_MANAGEMENT.md](docs/SESSION_MANAGEMENT.md) for complete documentation**
 
 ## Memory System
 
