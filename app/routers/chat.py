@@ -56,6 +56,12 @@ async def stream_chat(
     conv = await get_conversation(conversation_id, db) if request.conversation_id else None
     existing_messages = conv.messages if conv else []
     
+    # Get session_id: prioritize request > database > None
+    # This allows explicit session control (resumption, forking, or fresh start)
+    session_id = request.session_id
+    if not session_id and conv and conv.extra_data:
+        session_id = conv.extra_data.get("session_id")
+    
     all_messages = [
         ChatMessage(role=m["role"], content=m["content"])
         for m in existing_messages
@@ -70,13 +76,19 @@ async def stream_chat(
         yield f"data: {json.dumps({'event': 'conversation_id', 'data': {'id': conversation_id}})}\n\n"
         
         assistant_content = ""
+        captured_session_id = session_id  # Start with existing session_id
         
         async for event in agent_service.stream_chat(
             message=request.message,
             conversation_id=conversation_id,
             memory_labels=memory_labels,
+            session_id=session_id,
         ):
             yield f"data: {json.dumps({'event': event.event_type, 'data': event.data})}\n\n"
+            
+            # Capture session_id from the event stream
+            if event.event_type == "session_id":
+                captured_session_id = event.data.get("session_id")
             
             if event.event_type == "content_delta":
                 assistant_content += event.data.get("text", "")
@@ -84,11 +96,22 @@ async def stream_chat(
         if assistant_content:
             all_messages.append(ChatMessage(role="assistant", content=assistant_content))
         
-        await save_conversation(
-            conversation_id,
-            [{"role": m.role, "content": m.content} for m in all_messages],
-            db,
-        )
+        # Save conversation with session_id for resumption
+        conv = await get_conversation(conversation_id, db)
+        if conv:
+            conv.messages = [{"role": m.role, "content": m.content} for m in all_messages]
+            if captured_session_id:
+                conv.extra_data = {"session_id": captured_session_id}
+        else:
+            from app.models.database import ConversationDB
+            conv = ConversationDB(
+                id=conversation_id,
+                messages=[{"role": m.role, "content": m.content} for m in all_messages],
+                extra_data={"session_id": captured_session_id} if captured_session_id else None,
+            )
+            db.add(conv)
+        
+        await db.commit()
         
         yield f"data: {json.dumps({'event': 'done', 'data': {}})}\n\n"
     

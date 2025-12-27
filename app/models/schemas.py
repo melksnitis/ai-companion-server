@@ -21,6 +21,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
+    session_id: Optional[str] = None  # Claude SDK session ID for resumption/forking
     include_memory: bool = True
     tools_enabled: bool = True
     stream: bool = True
@@ -42,6 +43,8 @@ class ToolResult(BaseModel):
 
 class ChatStreamEvent(BaseModel):
     event_type: Literal[
+        "conversation_id",
+        "session_id",
         "message_start",
         "content_delta", 
         "content_stop",

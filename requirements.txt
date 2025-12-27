@@ -3,9 +3,12 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.18
 
-# Letta Learning SDK with Claude Agent SDK
-agentic-learning>=0.1.0
+# Letta Learning SDK with Claude Agent SDK (local patched version)
+-e ./letta-sdk/python
 claude-agent-sdk>=0.1.0
+anthropic>=0.39.0
+wrapt>=1.16.0
+sqlalchemy>=2.0.0
 anthropic==0.42.0
 
 # WebSocket support

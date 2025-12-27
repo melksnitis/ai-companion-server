@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # API Keys
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
+    router_api_key: str = ""
+    todoist_api_token: str = ""
     
     # Model Configuration (for reference - actual routing handled by Claude Code Router)
     max_tokens: int = 4096

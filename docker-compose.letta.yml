@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  letta-server:
+    image: letta/letta:latest
+    ports:
+      - "8283:8283"
+    environment:
+      # Configure OpenRouter as OpenAI provider
+      - OPENAI_API_BASE=https://openrouter.ai/api/v1
+      - OPENAI_API_KEY=${OPENROUTER_API_KEY}
+      # Letta server config
+      - LETTA_PG_DB=letta
+      - LETTA_PG_USER=letta
+      - LETTA_PG_PASSWORD=letta
+      - LETTA_PG_HOST=postgres
+      - LETTA_PG_PORT=5432
+    volumes:
+      - letta-data:/root/.letta
+    depends_on:
+      - postgres
+    networks:
+      - letta-network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=letta
+      - POSTGRES_USER=letta
+      - POSTGRES_PASSWORD=letta
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - letta-network
+
+volumes:
+  letta-data:
+  postgres-data:
+
+networks:
+  letta-network:
