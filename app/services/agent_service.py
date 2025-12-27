@@ -40,17 +40,27 @@ class AgentService:
         self.agent_name = settings.letta_agent_name
     
     def _get_agent_options(self) -> ClaudeAgentOptions:
-        """Configure Claude Agent SDK options with tools.
+        """Configure Claude Agent SDK options with tools and MCP servers.
         
         Model selection is handled by OpenRouter.
         Uses DeepSeek v3.2 by default, can be overridden with ANTHROPIC_DEFAULT_SONNET_MODEL env var.
         Workspace is set to /app/workspace for file operations.
+        MCP servers are loaded from config/mcp_servers.json.
         """
+        # Set Todoist API token for MCP server
+        if settings.todoist_api_token:
+            os.environ["TODOIST_API_TOKEN"] = settings.todoist_api_token
+        
+        # Get absolute path to MCP config (since cwd is set to workspace)
+        mcp_config_path = os.path.abspath("./config/mcp_servers.json")
+        
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
-            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch"],
+            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch", 
+                "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks"],
             model="deepseek/deepseek-v3.2",  # Use DeepSeek v3.2 via OpenRouter (supports tool use)
             cwd="./workspace",  # Set working directory for file operations (local)
+            mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)
         )
     
     async def stream_chat(
