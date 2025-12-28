@@ -58,8 +58,9 @@ async def stream_chat(
     
     # Get session_id: prioritize request > database > None
     # This allows explicit session control (resumption, forking, or fresh start)
-    session_id = request.session_id
-    if not session_id and conv and conv.extra_data:
+    # If reset_session=True, always use None to force fresh session
+    session_id = None if request.reset_session else request.session_id
+    if not session_id and not request.reset_session and conv and conv.extra_data:
         session_id = conv.extra_data.get("session_id")
     
     all_messages = [

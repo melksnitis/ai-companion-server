@@ -51,13 +51,24 @@ class AgentService:
         if settings.todoist_api_token:
             os.environ["TODOIST_API_TOKEN"] = settings.todoist_api_token
         
+        # Set Google OAuth credentials for MCP server
+        if settings.google_oauth_credentials:
+            abs_creds_path = os.path.abspath(settings.google_oauth_credentials)
+            os.environ["GOOGLE_OAUTH_CREDENTIALS"] = abs_creds_path
+            print(f"[MCP] Set GOOGLE_OAUTH_CREDENTIALS={abs_creds_path}")
+        else:
+            print(f"[MCP] WARNING: google_oauth_credentials not set in settings!")
+        
         # Get absolute path to MCP config (since cwd is set to workspace)
         mcp_config_path = os.path.abspath("./config/mcp_servers.json")
+        print(f"[MCP] Loading MCP config from: {mcp_config_path}")
+        print(f"[MCP] Config file exists: {os.path.exists(mcp_config_path)}")
         
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch", 
-                "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks"],
+                "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks",
+                "mcp__google-calendar__list-calendars", "mcp__google-calendar__list-events", "mcp__google-calendar__search-events", "mcp__google-calendar__get-event", "mcp__google-calendar__get-current-time"],
             model="deepseek/deepseek-v3.2",  # Use DeepSeek v3.2 via OpenRouter (supports tool use)
             cwd="./workspace",  # Set working directory for file operations (local)
             mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)

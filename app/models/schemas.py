@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
     session_id: Optional[str] = None  # Claude SDK session ID for resumption/forking
+    reset_session: bool = False  # Force new session, ignore saved session_id
     include_memory: bool = True
     tools_enabled: bool = True
     stream: bool = True
