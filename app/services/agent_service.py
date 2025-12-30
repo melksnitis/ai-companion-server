@@ -64,12 +64,13 @@ class AgentService:
         print(f"[MCP] Loading MCP config from: {mcp_config_path}")
         print(f"[MCP] Config file exists: {os.path.exists(mcp_config_path)}")
         
+        model_id = settings.openrouter_model_id
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch", 
                 "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks",
                 "mcp__google-calendar__list-calendars", "mcp__google-calendar__list-events", "mcp__google-calendar__search-events", "mcp__google-calendar__get-event", "mcp__google-calendar__get-current-time"],
-            model="deepseek/deepseek-v3.2",  # Use DeepSeek v3.2 via OpenRouter (supports tool use)
+            model=model_id,
             cwd="./workspace",  # Set working directory for file operations (local)
             mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)
         )
@@ -118,7 +119,7 @@ class AgentService:
                         event_type="message_start",
                         data={
                             "agent_id": agent_id,
-                            "model": "deepseek/deepseek-v3.2",
+                            "model": settings.openrouter_model_id,
                             "provider": "OpenRouter",
                             "memory_enabled": True,
                             "memory_blocks": memory_config

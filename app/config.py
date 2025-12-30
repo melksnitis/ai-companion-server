@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # API Keys
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
+    openrouter_model_id: str = "deepseek/deepseek-v3.2"
     router_api_key: str = ""
     todoist_api_token: str = ""
     google_oauth_credentials: str = ""
