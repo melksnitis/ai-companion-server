@@ -1,0 +1,6 @@
+{
+  "model": "xiaomi/mimo-v2-flash:free",
+  "permissions": {
+    "defaultMode": "dontAsk"
+  }
+}

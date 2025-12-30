@@ -1,4 +1,5 @@
 import logging
+import httpx
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,12 @@ from app.models.schemas import ChatMessage
 
 
 logger = logging.getLogger(__name__)
+
+# Enable httpx debug logging to trace outgoing requests
+httpx_logger = logging.getLogger("httpx")
+httpx_logger.setLevel(logging.DEBUG)
+httpcore_logger = logging.getLogger("httpcore")
+httpcore_logger.setLevel(logging.DEBUG)
 
 
 async def verify_openrouter_free_model() -> None:

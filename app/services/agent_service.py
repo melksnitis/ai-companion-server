@@ -25,9 +25,14 @@ class AgentService:
     """
     
     def __init__(self):
-        # Configure Claude Agent SDK to use OpenRouter directly
-        # Following OpenRouter's official guide: https://openrouter.ai/docs/guides/guides/claude-code-integration
-        os.environ["ANTHROPIC_BASE_URL"] = "https://openrouter.ai/api"
+        # Configure Claude Agent SDK to use OpenRouter (via proxy if enabled)
+        # Proxy rewrites all model fields to force free model usage
+        proxy_url = os.environ.get("OPENROUTER_PROXY_URL")
+        if proxy_url:
+            os.environ["ANTHROPIC_BASE_URL"] = proxy_url
+            print(f"[AgentService] Using proxy: {proxy_url}")
+        else:
+            os.environ["ANTHROPIC_BASE_URL"] = "https://openrouter.ai/api"
         os.environ["ANTHROPIC_AUTH_TOKEN"] = settings.openrouter_api_key
         os.environ["ANTHROPIC_API_KEY"] = ""  # Must be explicitly empty to prevent conflicts
         
@@ -65,6 +70,7 @@ class AgentService:
         print(f"[MCP] Config file exists: {os.path.exists(mcp_config_path)}")
         
         model_id = settings.openrouter_model_id
+        print(f"[AgentService] _get_agent_options using model={model_id}", flush=True)
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch", 
@@ -73,6 +79,7 @@ class AgentService:
             model=model_id,
             cwd="./workspace",  # Set working directory for file operations (local)
             mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)
+            cli_path="/usr/local/Cellar/node/23.6.1/bin/claude",  # Path to Claude CLI
         )
     
     async def stream_chat(

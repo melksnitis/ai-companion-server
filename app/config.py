@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     
     # API Keys
     anthropic_api_key: str = ""
+    anthropic_default_sonnet_model: str = ""
     openrouter_api_key: str = ""
     openrouter_model_id: str = "deepseek/deepseek-v3.2"
     router_api_key: str = ""
