@@ -35,6 +35,7 @@ class AgentService:
             os.environ["ANTHROPIC_BASE_URL"] = "https://openrouter.ai/api"
         os.environ["ANTHROPIC_AUTH_TOKEN"] = settings.openrouter_api_key
         os.environ["ANTHROPIC_API_KEY"] = ""  # Must be explicitly empty to prevent conflicts
+        os.environ["OPENROUTER_MODEL_ID"] = settings.openrouter_model_id  # Ensure Letta saves correct model
         
         # Configure Letta Learning SDK
         if settings.letta_api_key:
