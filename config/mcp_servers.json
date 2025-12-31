@@ -13,6 +13,36 @@
       "env": {
         "GOOGLE_OAUTH_CREDENTIALS": "${GOOGLE_OAUTH_CREDENTIALS}"
       }
+    },
+        "searxng-enhanced": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "SEARXNG_ENGINE_API_BASE_URL=https://static.235.116.180.157.clients.your-server.de/search",
+        "-e", "DESIRED_TIMEZONE=Europe/Riga",
+        "-e", "RETURNED_SCRAPPED_PAGES_NO=3",
+        "-e", "SCRAPPED_PAGES_NO=5",
+        "-e", "PAGE_CONTENT_WORDS_LIMIT=5000",
+        "-e", "CITATION_LINKS=True",
+        "-e", "MAX_IMAGE_RESULTS=10",
+        "-e", "MAX_VIDEO_RESULTS=10",
+        "-e", "MAX_FILE_RESULTS=5",
+        "-e", "MAX_MAP_RESULTS=5",
+        "-e", "MAX_SOCIAL_RESULTS=5",
+        "-e", "TRAFILATURA_TIMEOUT=15",
+        "-e", "SCRAPING_TIMEOUT=20",
+        "-e", "CACHE_MAXSIZE=100",
+        "-e", "CACHE_TTL_MINUTES=5",
+        "-e", "CACHE_MAX_AGE_MINUTES=30",
+        "-e", "RATE_LIMIT_REQUESTS_PER_MINUTE=10",
+        "-e", "RATE_LIMIT_TIMEOUT_SECONDS=60",
+        "-e", "IGNORED_WEBSITES=",
+        "-v", "mcp-config:/config",
+        "melksnitis/mcp-searxng-enhanced:latest"
+      ],
+      "timeout": 60
     }
   }
 }

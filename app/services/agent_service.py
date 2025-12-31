@@ -74,7 +74,7 @@ class AgentService:
         print(f"[AgentService] _get_agent_options using model={model_id}", flush=True)
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
-            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "WebSearch", 
+            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "mcp__searxng-enhanced__search_web", "mcp__searxng-enhanced__get_website", "mcp__searxng-enhanced__get_current_datetime", 
                 "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks",
                 "mcp__google-calendar__list-calendars", "mcp__google-calendar__list-events", "mcp__google-calendar__search-events", "mcp__google-calendar__get-event", "mcp__google-calendar__get-current-time"],
             model=model_id,
