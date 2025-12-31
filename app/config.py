@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     letta_api_key: str = ""
     letta_base_url: str = "https://api.letta.com"
     letta_agent_name: str = "evolving-assistant"
+    letta_sleeptime_frequency: int = 5
     
     # Workspace Configuration
     workspace_path: str = "./workspace"

@@ -44,6 +44,7 @@ class AgentService:
             os.environ["LETTA_BASE_URL"] = settings.letta_base_url
         
         self.agent_name = settings.letta_agent_name
+        self._configure_sleeptime_agent()
     
     def _get_agent_options(self) -> ClaudeAgentOptions:
         """Configure Claude Agent SDK options with tools and MCP servers.
@@ -82,6 +83,31 @@ class AgentService:
             mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)
             cli_path="/usr/local/Cellar/node/23.6.1/bin/claude",  # Path to Claude CLI
         )
+    
+    def _configure_sleeptime_agent(self) -> None:
+        """Ensure the Letta agent has sleeptime enabled with desired frequency."""
+        try:
+            from agentic_learning import AgenticLearning
+            client = AgenticLearning()
+            
+            agent = client.agents.retrieve(agent=self.agent_name)
+            if not agent:
+                default_memory = ["human", "persona", "preferences", "knowledge"]
+                agent = client.agents.create(
+                    agent=self.agent_name,
+                    memory=default_memory,
+                    model=settings.openrouter_model_id,
+                )
+                print(f"[Sleeptime] Created Letta agent '{self.agent_name}' with sleeptime enabled.")
+            
+            client.agents.sleeptime.update(
+                agent=self.agent_name,
+                model=settings.openrouter_model_id,
+                frequency=settings.letta_sleeptime_frequency,
+            )
+            print(f"[Sleeptime] Configured frequency={settings.letta_sleeptime_frequency} turns for agent '{self.agent_name}'.")
+        except Exception as exc:
+            print(f"[Sleeptime] WARNING: Failed to configure sleeptime agent ({exc})")
     
     async def stream_chat(
         self,
