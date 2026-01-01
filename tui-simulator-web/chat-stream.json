@@ -1,0 +1,49 @@
+{
+  "log_lines": [
+    {
+      "type": "system",
+      "text": "Claude session init · model xiaomi/mimo-v2-flash:free via OpenRouter"
+    },
+    {
+      "type": "command",
+      "text": "Task: Get Reddit worldnews top 10 (auto tool)"
+    },
+    {
+      "type": "tool",
+      "text": "Google Calendar list-events · primary · 2025-12-31 → 2026-01-07"
+    },
+    {
+      "type": "tool",
+      "text": "Google Calendar list-events · 48e36047db2757a9b7762bb4d45d52c72c21aafd26c713c8c933702fd9a0f977@group.calendar.google.com · 2025-12-31 → 2026-01-07"
+    },
+    {
+      "type": "command",
+      "text": "WebSearch query: site:reddit.com r/worldnews December 31 2025 top posts trending"
+    },
+    {
+      "type": "command",
+      "text": "WebSearch query: r/worldnews top posts December 31 2025 world news trending"
+    },
+    {
+      "type": "system",
+      "text": "Calendar response: 0 events"
+    }
+  ],
+  "events": [
+    {
+      "id": "calendar-status",
+      "title": "Nav ieplānotu notikumu tuvāko 7 dienu logā",
+      "meta": "",
+      "detail": "Nākamais notikums: Nav pieejams — \"Nav atrasts nākamais notikums\""
+    }
+  ],
+  "final_line": "",
+  "window": {
+    "start": "2025-12-31",
+    "end": "2026-01-07"
+  },
+  "next_event": {
+    "label": "Nav pieejams",
+    "title": "Nav atrasts nākamais notikums"
+  }
+}

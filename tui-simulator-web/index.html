@@ -8,37 +8,35 @@
   </head>
   <body>
     <main class="viewport">
-      <section class="cli-shell">
-        <header class="cli-header">
-          <div>
-            <span class="dot dot-green"></span>
-            <span class="dot dot-amber"></span>
-            <span class="dot dot-pink"></span>
+      <section class="terminal">
+        <div class="terminal-frame">
+          <div id="status-line" class="status-line">
+            <span class="status-icon" aria-hidden="true"></span>
+            <div class="status-content">
+              <span class="status-verb">Stand by</span>
+              <span class="status-info">— gaidu jautājumu.</span>
+            </div>
+            <span class="status-timer">00s</span>
           </div>
-          <p id="status-line">Stand by — gaidu jautājumu.</p>
-        </header>
-
-        <div class="cli-body">
-          <div class="pane pane-log">
-            <h2>Dialogs</h2>
-            <div id="log-stream" class="log-stream"></div>
-          </div>
-
-          <div class="pane pane-events">
-            <h2>Notikumu straume</h2>
-            <div id="event-feed" class="event-feed"></div>
-          </div>
+          <div id="log-lines" class="log-lines"></div>
         </div>
 
-        <footer class="cli-footer">
-          <form id="prompt-form">
-            <label for="prompt-input">Tavs pieprasījums</label>
-            <div class="input-row">
-              <input id="prompt-input" type="text" autocomplete="off" placeholder="Piem., 'search-events + list-events 2 nedēļām'" />
-              <button type="submit">Sūtīt</button>
-            </div>
+        <div class="terminal-prompt">
+          <form id="prompt-form" autocomplete="off">
+            <span class="caret">&gt;</span>
+            <input
+              id="prompt-input"
+              type="text"
+              placeholder="Task: Izsauc search-events lai dabūtu 2 nedēļu notikumus..."
+            />
           </form>
-        </footer>
+          <div class="hint-row">
+            <span>! for bash mode</span>
+            <span>/ for commands</span>
+            <span>tab to undo</span>
+            <span>⏎ for newline</span>
+          </div>
+        </div>
       </section>
     </main>
 

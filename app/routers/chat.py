@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+from pathlib import Path
+from datetime import datetime
 import json
 import uuid
 
@@ -11,6 +13,7 @@ from app.services import AgentService, MemoryService
 from sqlalchemy import select
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+STREAM_LOG_PATH = Path(__file__).resolve().parents[2] / "chat-stream.log"
 
 
 async def get_conversation(
@@ -74,7 +77,13 @@ async def stream_chat(
     agent_service = AgentService()
     
     async def generate_stream():
-        yield f"data: {json.dumps({'event': 'conversation_id', 'data': {'id': conversation_id}})}\n\n"
+        captured_events: List[dict] = []
+
+        def record_and_yield(event_payload: dict):
+            captured_events.append(event_payload)
+            return f"data: {json.dumps(event_payload)}\n\n"
+
+        yield record_and_yield({'event': 'conversation_id', 'data': {'id': conversation_id}})
         
         assistant_content = ""
         captured_session_id = session_id  # Start with existing session_id
@@ -85,7 +94,8 @@ async def stream_chat(
             memory_labels=memory_labels,
             session_id=session_id,
         ):
-            yield f"data: {json.dumps({'event': event.event_type, 'data': event.data})}\n\n"
+            payload = {'event': event.event_type, 'data': event.data}
+            yield record_and_yield(payload)
             
             # Capture session_id from the event stream
             if event.event_type == "session_id":
@@ -113,8 +123,21 @@ async def stream_chat(
             db.add(conv)
         
         await db.commit()
+
+        STREAM_LOG_PATH.write_text(
+            json.dumps(
+                {
+                    "saved_at": datetime.utcnow().isoformat(),
+                    "conversation_id": conversation_id,
+                    "events": captured_events,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         
-        yield f"data: {json.dumps({'event': 'done', 'data': {}})}\n\n"
+        yield record_and_yield({'event': 'done', 'data': {}})
     
     return StreamingResponse(
         generate_stream(),
