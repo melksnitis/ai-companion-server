@@ -35,6 +35,13 @@ const statusController = {
   timerHandle: null,
   timerStartedAt: null,
 };
+const audioController = {
+  ctx: null,
+  oscillator: null,
+  gain: null,
+  enabled: true,
+  total: 0,
+};
 const groupingState = {
   assistantPartial: {
     node: null,
@@ -119,6 +126,67 @@ function stopElapsedTimer() {
   updateTimerDisplay(0);
 }
 
+function ensureAudioContext() {
+  if (typeof window === 'undefined') return null;
+  if (!audioController.enabled) return null;
+  if (audioController.ctx) return audioController.ctx;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  audioController.ctx = new AudioContext();
+  return audioController.ctx;
+}
+
+function startSonicProgress(totalEvents) {
+  const ctx = ensureAudioContext();
+  if (!ctx || totalEvents <= 0) return;
+
+  stopSonicProgress();
+  audioController.total = totalEvents;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 140;
+  gain.gain.value = 0.02;
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+
+  audioController.oscillator = osc;
+  audioController.gain = gain;
+}
+
+function updateSonicProgress(processedEvents) {
+  const { oscillator, total } = audioController;
+  if (!oscillator || !total) return;
+  const ratio = Math.min(Math.max(processedEvents / total, 0), 1);
+  const freq = 140 + ratio * 220;
+  oscillator.frequency.setTargetAtTime(freq, oscillator.context.currentTime, 0.2);
+  if (audioController.gain) {
+    const gainValue = 0.01 + ratio * 0.03;
+    audioController.gain.gain.setTargetAtTime(gainValue, oscillator.context.currentTime, 0.3);
+  }
+  if (processedEvents >= total) {
+    stopSonicProgress();
+  }
+}
+
+function stopSonicProgress() {
+  if (audioController.oscillator) {
+    try {
+      audioController.oscillator.stop(0.05);
+    } catch (_) {
+      /* ignore */
+    }
+    audioController.oscillator.disconnect();
+  }
+  if (audioController.gain) {
+    audioController.gain.disconnect();
+  }
+  audioController.oscillator = null;
+  audioController.gain = null;
+  audioController.total = 0;
+}
+
 function status(state) {
   const preset = STATUS_PRESETS[state] || STATUS_PRESETS.idle;
   statusController.state = state in STATUS_PRESETS ? state : 'idle';
@@ -139,6 +207,7 @@ function status(state) {
 
   if (state === 'idle') {
     stopElapsedTimer();
+    stopSonicProgress();
   } else {
     startElapsedTimer();
   }
@@ -521,6 +590,7 @@ function streamEvents() {
   if (!logSnapshot?.events?.length) {
     appendLine({ type: 'warning', text: 'Nav saglabātu notikumu straumju.' });
     status('idle');
+    stopSonicProgress();
     return;
   }
 
@@ -536,12 +606,26 @@ function streamEvents() {
     }
   });
 
+  const totalEvents = queue.length + (finalResult ? 1 : 0);
+  let processedEvents = 0;
+  if (totalEvents > 0) {
+    startSonicProgress(totalEvents);
+  } else {
+    stopSonicProgress();
+  }
+
+  const markProcessed = () => {
+    processedEvents += 1;
+    updateSonicProgress(processedEvents);
+  };
+
   status('busy');
 
   function next() {
     if (!queue.length) {
       if (finalResult) {
         renderEvent(finalResult, { isFinal: true });
+        markProcessed();
         finalResult = null;
         return;
       }
@@ -550,11 +634,13 @@ function streamEvents() {
         text: 'AI> Notikumu straume pabeigta.',
       });
       status('idle');
+      stopSonicProgress();
       return;
     }
 
     const event = queue.shift();
     renderEvent(event);
+    markProcessed();
 
     const fast = event.event === 'content_delta';
     setTimeout(next, fast ? 80 : 260);

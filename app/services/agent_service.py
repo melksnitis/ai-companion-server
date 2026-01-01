@@ -85,16 +85,39 @@ class AgentService:
         
         model_id = settings.openrouter_model_id
         print(f"[AgentService] _get_agent_options using model={model_id}", flush=True)
+        os.environ.setdefault("CLAUDE_CLI_DEFAULT_TOOLS", "0")
+        instructions = (
+            "Web research policy:\n"
+            "- You MUST use the searxng MCP tools (mcp__searxng-enhanced__search_web and "
+            "mcp__searxng-enhanced__get_website) for every web lookup.\n"
+            "- You MUST NOT call the legacy WebSearch/WebFetch/Task/TaskOutput tools. "
+            "If you need search results, invoke the searxng MCP tools instead.\n"
+            "- If the searxng MCP server is unavailable, explain that web search is temporarily "
+            "blocked and ask the user how to proceed."
+        )
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
-            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Search", "mcp__searxng-enhanced__search_web", "mcp__searxng-enhanced__get_website", "mcp__searxng-enhanced__get_current_datetime", 
+            allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "mcp__searxng-enhanced__search_web", "mcp__searxng-enhanced__get_website", "mcp__searxng-enhanced__get_current_datetime", 
                 "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks",
                 "mcp__google-calendar__list-calendars", "mcp__google-calendar__list-events", "mcp__google-calendar__search-events", "mcp__google-calendar__get-event", "mcp__google-calendar__get-current-time"],
             model=model_id,
+            system_prompt=instructions,
             cwd="./workspace",  # Set working directory for file operations (local)
             mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)
             cli_path="/usr/local/Cellar/node/23.6.1/bin/claude",  # Path to Claude CLI
+            can_use_tool=self._enforce_tool_policy,
         )
+    
+    @staticmethod
+    def _enforce_tool_policy(tool_name: str, allowed: bool) -> bool:
+        """Force disallowed tools to be rejected with guidance."""
+        legacy = {"WebSearch", "WebFetch", "Task", "TaskOutput"}
+        if tool_name in legacy:
+            raise PermissionError(
+                f"{tool_name} is disabled. Please use the searxng MCP tools "
+                "(mcp__searxng-enhanced__search_web / get_website) for web access."
+            )
+        return allowed
     
     def _configure_sleeptime_agent(self) -> None:
         """Ensure the Letta agent has sleeptime enabled with desired frequency."""

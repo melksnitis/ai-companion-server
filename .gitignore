@@ -12,6 +12,9 @@ env/
 *.egg-info/
 *.egg
 *.secret*
+# Logs
+*.log
+logs/
 # Environment
 .env
 .env.local

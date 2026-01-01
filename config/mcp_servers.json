@@ -14,7 +14,7 @@
         "GOOGLE_OAUTH_CREDENTIALS": "${GOOGLE_OAUTH_CREDENTIALS}"
       }
     },
-        "searxng-enhanced": {
+    "searxng-enhanced": {
       "command": "docker",
       "args": [
         "run",
