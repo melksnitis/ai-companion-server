@@ -5,8 +5,20 @@ Based on: https://github.com/letta-ai/learning-sdk/blob/main/examples/claude_res
 """
 
 import os
+from dataclasses import asdict
 from typing import AsyncGenerator, Optional, List, Dict, Any
-from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, TextBlock, ToolUseBlock
+from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
+from claude_agent_sdk.types import (
+    AssistantMessage,
+    ResultMessage,
+    StreamEvent,
+    SystemMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    UserMessage,
+)
 from agentic_learning import learning
 
 from app.config import settings
@@ -128,6 +140,7 @@ class AgentService:
         memory_config = memory_labels or ["human", "persona", "preferences", "knowledge"]
         
         options = self._get_agent_options()
+        options.include_partial_messages = True
         
         # Add session resumption if session_id provided
         if session_id:
@@ -163,20 +176,47 @@ class AgentService:
                     await client.query(prompt=message)
                     
                     captured_session_id = None
+                    active_tool_calls: Dict[str, ToolCall] = {}
+                    
                     async for msg in client.receive_response():
-                        # Capture session ID from system init message
-                        # Python SDK: SystemMessage has subtype='init' and data={'session_id': '...'}
-                        from claude_agent_sdk import SystemMessage
-                        if isinstance(msg, SystemMessage) and msg.subtype == 'init':
-                            if 'session_id' in msg.data:
-                                captured_session_id = msg.data['session_id']
-                                print(f"[SESSION] Captured session ID: {captured_session_id}")
-                                yield ChatStreamEvent(
-                                    event_type="session_id",
-                                    data={"session_id": captured_session_id}
-                                )
+                        if isinstance(msg, SystemMessage):
+                            data = msg.data or {}
+                            yield ChatStreamEvent(
+                                event_type="system_message",
+                                data=data,
+                            )
+                            
+                            if msg.subtype == "init":
+                                if 'session_id' in data:
+                                    captured_session_id = data['session_id']
+                                    print(f"[SESSION] Captured session ID: {captured_session_id}")
+                                    yield ChatStreamEvent(
+                                        event_type="system_init",
+                                        data=data,
+                                    )
+                                    yield ChatStreamEvent(
+                                        event_type="session_id",
+                                        data={"session_id": captured_session_id}
+                                    )
                         
-                        if isinstance(msg, AssistantMessage):
+                        elif isinstance(msg, UserMessage):
+                            yield ChatStreamEvent(
+                                event_type="user_message",
+                                data={"message": asdict(msg)},
+                            )
+                        
+                        elif isinstance(msg, StreamEvent):
+                            yield ChatStreamEvent(
+                                event_type="assistant_partial",
+                                data={"message": asdict(msg)},
+                            )
+                        
+                        elif isinstance(msg, AssistantMessage):
+                            yield ChatStreamEvent(
+                                event_type="assistant_message",
+                                data={"message": asdict(msg)},
+                            )
+                            
                             for block in msg.content:
                                 if isinstance(block, TextBlock):
                                     yield ChatStreamEvent(
@@ -184,26 +224,58 @@ class AgentService:
                                         data={"text": block.text}
                                     )
                                 
+                                elif isinstance(block, ThinkingBlock):
+                                    yield ChatStreamEvent(
+                                        event_type="thinking_delta",
+                                        data={"thinking": block.thinking}
+                                    )
+                                
                                 elif isinstance(block, ToolUseBlock):
                                     tool_call = ToolCall(
                                         id=block.id,
                                         name=block.name,
                                         input=block.input,
-                                        status="completed"
+                                        status="running"
                                     )
+                                    active_tool_calls[tool_call.id] = tool_call
                                     
                                     yield ChatStreamEvent(
                                         event_type="tool_use_start",
                                         data={
                                             "tool_call_id": tool_call.id,
-                                            "tool_name": tool_call.name
+                                            "tool_name": tool_call.name,
+                                            "tool_input": tool_call.input,
+                                        }
+                                    )
+                                
+                                elif isinstance(block, ToolResultBlock):
+                                    yield ChatStreamEvent(
+                                        event_type="tool_result",
+                                        data={
+                                            "tool_use_id": block.tool_use_id,
+                                            "content": block.content,
+                                            "is_error": block.is_error,
                                         }
                                     )
                                     
-                                    yield ChatStreamEvent(
-                                        event_type="tool_use_stop",
-                                        data={"tool_call": tool_call.model_dump()}
-                                    )
+                                    tool_call = active_tool_calls.get(block.tool_use_id)
+                                    if tool_call:
+                                        tool_call.status = "completed" if not block.is_error else "failed"
+                                        yield ChatStreamEvent(
+                                            event_type="tool_use_stop",
+                                            data={"tool_call": tool_call.model_dump()}
+                                        )
+                            
+                            yield ChatStreamEvent(
+                                event_type="content_stop",
+                                data={}
+                            )
+                        
+                        elif isinstance(msg, ResultMessage):
+                            yield ChatStreamEvent(
+                                event_type="result",
+                                data={"message": asdict(msg)},
+                            )
                     
                     yield ChatStreamEvent(
                         event_type="message_stop",
