@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="lv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Stream CLI — Web</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="viewport">
+      <section class="cli-shell">
+        <header class="cli-header">
+          <div>
+            <span class="dot dot-green"></span>
+            <span class="dot dot-amber"></span>
+            <span class="dot dot-pink"></span>
+          </div>
+          <p id="status-line">Stand by — gaidu jautājumu.</p>
+        </header>
+
+        <div class="cli-body">
+          <div class="pane pane-log">
+            <h2>Dialogs</h2>
+            <div id="log-stream" class="log-stream"></div>
+          </div>
+
+          <div class="pane pane-events">
+            <h2>Notikumu straume</h2>
+            <div id="event-feed" class="event-feed"></div>
+          </div>
+        </div>
+
+        <footer class="cli-footer">
+          <form id="prompt-form">
+            <label for="prompt-input">Tavs pieprasījums</label>
+            <div class="input-row">
+              <input id="prompt-input" type="text" autocomplete="off" placeholder="Piem., 'search-events + list-events 2 nedēļām'" />
+              <button type="submit">Sūtīt</button>
+            </div>
+          </form>
+        </footer>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
