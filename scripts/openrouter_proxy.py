@@ -27,6 +27,21 @@ print(f"[PROXY] Force model: {FORCE_MODEL}")
 print(f"[PROXY] API key set: {bool(API_KEY)}")
 
 
+@app.post("/v1/messages/count_tokens")
+async def count_tokens(request: Request):
+    """Stub endpoint for count_tokens - OpenRouter doesn't support this."""
+    body = await request.json()
+    # Return a fake token count to prevent CLI crash
+    return {"input_tokens": 100}
+
+
+@app.post("/api/event_logging/batch")
+async def event_logging(request: Request):
+    """Stub endpoint for event logging - OpenRouter doesn't support this."""
+    # Return success to prevent CLI crash
+    return {"status": "ok"}
+
+
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 async def proxy(request: Request, path: str):
     """Proxy all requests to OpenRouter, rewriting model field."""

@@ -4,6 +4,7 @@ Combines OpenRouter's model routing with Letta's persistent memory and learning.
 Based on: https://github.com/letta-ai/learning-sdk/blob/main/examples/claude_research_agent
 """
 
+import logging
 import os
 from dataclasses import asdict
 from typing import AsyncGenerator, Optional, List, Dict, Any
@@ -23,6 +24,8 @@ from agentic_learning import learning
 
 from app.config import settings
 from app.models.schemas import ChatStreamEvent, ToolCall
+
+logger = logging.getLogger(__name__)
 
 class AgentService:
     """Agent service using Claude Agent SDK with OpenRouter and Letta Learning SDK.
@@ -95,17 +98,21 @@ class AgentService:
             "- If the searxng MCP server is unavailable, explain that web search is temporarily "
             "blocked and ask the user how to proceed."
         )
+        cli_path = (
+            settings.claude_cli_path
+            or os.environ.get("CLAUDE_CLI_PATH")
+            or "/usr/local/bin/claude"
+        )
+        print(f"[AgentService] Using Claude CLI at: {cli_path}", flush=True)
         return ClaudeAgentOptions(
             permission_mode="dontAsk",
             allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "mcp__searxng-enhanced__search_web", "mcp__searxng-enhanced__get_website", "mcp__searxng-enhanced__get_current_datetime", 
                 "mcp__todoist__todoist_create_task", "mcp__todoist__todoist_complete_task", "mcp__todoist__todoist_get_tasks",
                 "mcp__google-calendar__list-calendars", "mcp__google-calendar__list-events", "mcp__google-calendar__search-events", "mcp__google-calendar__get-event", "mcp__google-calendar__get-current-time"],
             model=model_id,
-            system_prompt=instructions,
             cwd="./workspace",  # Set working directory for file operations (local)
             mcp_servers=mcp_config_path,  # MCP servers configuration (absolute path)
             cli_path="/usr/local/Cellar/node/23.6.1/bin/claude",  # Path to Claude CLI
-            can_use_tool=self._enforce_tool_policy,
         )
     
     @staticmethod
@@ -306,6 +313,11 @@ class AgentService:
                     )
         
         except Exception as e:
+            stderr_output = getattr(e, "stderr", None)
+            logger.exception(
+                "Claude Agent SDK session failed",
+                extra={"claude_stderr": stderr_output, "conversation_id": conversation_id},
+            )
             yield ChatStreamEvent(
                 event_type="error",
                 data={"error": str(e), "type": type(e).__name__}

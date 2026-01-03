@@ -22,7 +22,7 @@ logs/
 # Database
 *.db
 data/*.db
-
+*.tar.gz
 # IDE
 .idea/
 .vscode/

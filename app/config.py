@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-me-in-production"
     
+    # Claude CLI
+    claude_cli_path: str = ""
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
